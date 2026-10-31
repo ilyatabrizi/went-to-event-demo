@@ -242,7 +242,7 @@ html[lang=fa] .lede,html[lang=fa] .body{line-height:1.95}
   background:linear-gradient(0deg,rgb(var(--bg-rgb) / .66),rgb(var(--bg-rgb) / .3) 50%,transparent);
   -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
   -webkit-mask-image:linear-gradient(0deg,#000 40%,transparent);mask-image:linear-gradient(0deg,#000 40%,transparent)}
-body[data-away] .edge{opacity:0}
+body[data-away] .edge-t{opacity:0}
 
 /* ═══ 4 · SHELL ════════════════════════════════════════════════════════════ */
 #view{
@@ -259,37 +259,32 @@ body[data-away] .edge{opacity:0}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .wrap{width:100%;max-width:1180px;margin-inline:auto;padding-inline:clamp(16px,4.2vw,36px)}
 
-/* — header capsule — folds to just the switch + theme on scroll, opens on scroll-up — */
+/* — header: one steady glass capsule. It never changes shape, so nothing in it can jump. — */
 .topbar{
   position:fixed;z-index:60;top:calc(var(--safe-t) + 10px);left:0;right:0;
-  display:flex;justify-content:center;pointer-events:none;
-  transition:transform .5s var(--ease),opacity .4s;
+  display:flex;justify-content:center;pointer-events:none;padding-inline:var(--bar-gap);
 }
 .top-cap{
-  --ti:42px;
-  pointer-events:auto;width:min(calc(100% - 2*var(--bar-gap)),780px);height:calc(var(--ti) + 12px);border-radius:var(--r-pill);
+  --ti:40px;
+  pointer-events:auto;width:min(100%,780px);height:calc(var(--ti) + 12px);border-radius:var(--r-pill);
   display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px;
-  transition:width .55s var(--spring-soft),height .4s var(--ease);
+  transition:opacity .3s var(--ease),transform .4s var(--ease);
 }
-.topbar.min .top-cap{--ti:36px;width:var(--top-min-w,272px)}
-.top-cap .l,.top-cap .r{display:flex;align-items:center;min-width:0}
-.top-cap .r{gap:0}
-.top-cap .r > * + *{margin-inline-start:6px}
-.brand-btn{display:flex;align-items:center;gap:9px;height:var(--ti);padding-inline:9px 12px;border-radius:var(--r-pill);min-width:0;transition:height .4s var(--ease),transform .3s var(--spring)}
+.top-cap .l,.top-cap .r{display:flex;align-items:center;min-width:0;gap:4px}
+.top-cap .l{flex:1 1 auto}
+.top-cap .r{flex:none}
+.top-cap .r .mode-seg{margin-inline-end:2px}
+.brand-btn{display:flex;align-items:center;gap:9px;height:var(--ti);padding-inline:9px 12px;border-radius:var(--r-pill);min-width:0;transition:transform .3s var(--spring)}
 .brand-btn:active{transform:scale(.96)}
 .mark{height:24px;width:auto;aspect-ratio:1115/855;display:block;--wte-e:var(--fg);--wte-dot:var(--ember);flex:none}
 .brand-name{font-family:'Outfit',sans-serif;font-weight:700;font-size:15px;letter-spacing:-.01em;white-space:nowrap}
-.fold-x{display:flex;align-items:center;overflow:hidden;flex:none;max-width:140px;
-  transition:max-width .45s var(--ease),opacity .22s var(--ease),margin .45s var(--ease)}
-.fold-x > * + *{margin-inline-start:6px}
-.topbar.min .fold-x{max-width:0;opacity:0;pointer-events:none;margin-inline-start:0!important}
-.host-chip{display:flex;align-items:center;gap:9px;height:var(--ti);padding-inline:4px 14px;border-radius:var(--r-pill);min-width:0}
-.host-chip .nm{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.host-chip{display:flex;align-items:center;gap:9px;height:var(--ti);padding-inline:3px 12px;border-radius:var(--r-pill);min-width:0}
+.host-chip .nm{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .icon-btn{width:var(--ti,42px);height:var(--ti,42px);border-radius:50%;display:grid;place-items:center;position:relative;flex:none;color:var(--fg);
-  transition:background .25s,transform .3s var(--spring),width .4s var(--ease),height .4s var(--ease)}
-.icon-btn:hover{background:var(--fill-2)}
+  transition:background .25s,transform .3s var(--spring)}
+@media (hover:hover){.icon-btn:hover{background:var(--fill-2)}}
 .icon-btn:active{transform:scale(.9)}
-.icon-btn .dot{position:absolute;top:9px;inset-inline-end:10px;width:8px;height:8px;border-radius:50%;background:var(--ember);box-shadow:0 0 0 2px var(--sheet-solid)}
+.icon-btn .dot{position:absolute;top:8px;inset-inline-end:9px;width:8px;height:8px;border-radius:50%;background:var(--ember);box-shadow:0 0 0 2px var(--sheet-solid)}
 .lang-btn{font-family:'Outfit',sans-serif;font-weight:700;font-size:12px;letter-spacing:.04em}
 /* sun ↔ moon: the one that is showing turns away as the other turns in */
 .theme-btn .ico{position:absolute;transition:transform .6s var(--spring),opacity .3s}
@@ -306,56 +301,62 @@ body[data-away] .edge{opacity:0}
 .seg.ember .seg-pill{background:var(--ember)}
 .mode-seg button{font-family:'Outfit',sans-serif;letter-spacing:.005em}
 
-/* — tab bar — one capsule of glass that folds to the tabs you need as you read down a page.
-   Ported from KAIRO. The wrapper is centred with flex and padding, never a transform: a transform
-   above a backdrop-filter makes it a backdrop root and the glass blurs nothing at all. */
+/* — tab bar — minimises like iOS 26. The tabs never resize: the capsule narrows to clip them and the row slides
+   so the current tab stays in view. Geometry is pure CSS; JS only sets --li / --shift and the .min class.
+   No transform or opacity on any ancestor of the glass (that would make it a backdrop root that blurs nothing). */
 .tabbar{
+  --n:4;
+  --bar-w:min(calc(100vw - 2 * var(--bar-gap)), calc(var(--n) * 92px + 2 * var(--tabs-pad)));
+  --tab-w:calc((var(--bar-w) - 2 * var(--tabs-pad)) / var(--n));
+  --mini-w:calc(var(--tab-w) + 2 * var(--tabs-pad));
   position:fixed;z-index:60;left:0;right:0;bottom:calc(var(--safe-b) + 14px);
   display:flex;justify-content:center;pointer-events:none;
-  transition:transform .55s var(--ease),opacity .3s;
 }
-.tabbar.hide{transform:translateY(calc(100% + 40px));opacity:0}
-.tabbar-in{
-  width:min(calc(100% - 2*var(--bar-gap)),calc(var(--n,4) * 94px + var(--tabs-pad) * 2));
-  display:flex;align-items:center;justify-content:space-between;
+.tabbar-in{position:relative;width:var(--bar-w);height:var(--tabs-h);display:flex}
+.tb{
+  position:relative;width:100%;height:100%;padding:var(--tabs-pad);border-radius:var(--r-pill);
+  overflow:hidden;pointer-events:auto;touch-action:pan-y;
+  transition:width .5s var(--spring-soft),opacity .3s var(--ease),transform .45s var(--ease);
 }
-.tabs{
-  position:relative;flex:none;height:var(--tabs-h);width:100%;padding:var(--tabs-pad);border-radius:var(--r-pill);
-  overflow:hidden;touch-action:none;pointer-events:auto;
-  transition:width .55s var(--spring-soft),height .45s var(--ease);
+.tb-row{
+  position:relative;z-index:1;height:100%;display:flex;width:calc(var(--n) * var(--tab-w));
+  transform:translateX(0);transition:transform .5s var(--spring-soft);
 }
-.tabs-row{position:relative;z-index:1;height:100%;display:flex;width:var(--row-w,100%)}
 .tab{
-  position:relative;flex:0 0 var(--tab-w,calc(100% / var(--n,4)));min-width:0;overflow:hidden;
+  position:relative;flex:0 0 var(--tab-w);height:100%;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:var(--r-pill);color:var(--muted);
-  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none;
-  transition:color .25s var(--ease),transform .2s var(--ease),opacity .26s var(--ease) .1s,flex-basis .46s var(--spring-soft);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none;-webkit-tap-highlight-color:transparent;
+  transition:color .25s var(--ease),opacity .3s var(--ease) .12s;
 }
-.tab:active{transform:scale(.92)}
-.tab-ico{position:relative;width:24px;height:24px;display:grid;place-items:center}
+.tab:active .tab-ico{transform:scale(.88)}
+.tab-ico{position:relative;width:24px;height:24px;display:grid;place-items:center;transition:transform .3s var(--spring)}
 .tab-ico svg{transition:transform .45s var(--spring),fill .3s;fill:transparent}
 .tab-label{font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.01em;line-height:1;white-space:nowrap}
 .tab[aria-current=page],.tab.under{color:var(--act)}
-.tab[aria-current=page] .tab-ico svg{fill:color-mix(in srgb,currentColor 24%,transparent);transform:scale(1.06)}
-.tab .badge{position:absolute;top:7px;inset-inline-start:calc(50% + 5px);min-width:16px;height:16px;padding-inline:4px;border-radius:8px;background:var(--ember);color:var(--on-ember);font-size:10px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 2px var(--sheet-solid);font-family:'Outfit',sans-serif;line-height:1}
-.tabs-lens{
-  position:absolute;z-index:0;top:0;left:0;height:100%;width:var(--lens-w,0px);border-radius:var(--r-pill);
-  background:var(--lens-bg);box-shadow:var(--lens-edge),var(--lens-shadow);opacity:0;
-  transform:translateX(var(--lens-x,0px));
-  transition:transform .55s var(--spring),width .3s var(--ease),opacity .2s,scale .3s var(--spring);
+.tab[aria-current=page] .tab-ico svg{fill:color-mix(in srgb,currentColor 24%,transparent)}
+.tab .badge{position:absolute;top:6px;inset-inline-start:calc(50% + 4px);min-width:16px;height:16px;padding-inline:4px;border-radius:8px;background:var(--ember);color:var(--on-ember);font-size:10px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 2px var(--sheet-solid);font-family:'Outfit',sans-serif;line-height:1}
+.tb-lens{
+  position:absolute;z-index:0;top:0;left:0;width:var(--tab-w);height:100%;border-radius:var(--r-pill);
+  background:var(--lens-bg);box-shadow:var(--lens-edge),var(--lens-shadow);
+  transform:translateX(calc(var(--li,0) * var(--tab-w)));
+  transition:transform .5s var(--spring),scale .3s var(--spring),opacity .2s;
 }
-.tabbar[data-ready="1"] .tabs-lens{opacity:1}
-.tabbar.dragging .tabs-lens{transition:width .3s var(--ease),scale .3s var(--spring);scale:1.1 1.14;box-shadow:var(--lens-edge),0 12px 26px -8px rgba(0,0,0,.5)}
-/* folded: the capsule is as wide as the tabs it keeps; the rest collapse to zero rather than being squeezed,
-   so the survivors never move and nothing measures a tab in mid-shrink */
-.tabbar.min .tabs{width:calc(var(--tab-w) * var(--kept-n,2) + var(--tabs-pad) * 2);height:56px}
-.tabbar.min .tab:not([data-keep]){flex-basis:0;opacity:0;pointer-events:none;transform:scale(.8);
-  transition:flex-basis .42s var(--ease),opacity .16s var(--ease),transform .3s var(--ease)}
-/* the accessory that takes the trailing edge when folded: back to top */
-.tabs-top{flex:none;width:0;height:56px;margin-inline-start:0;opacity:0;pointer-events:none;border-radius:50%;display:grid;place-items:center;color:var(--fg);
-  overflow:hidden;transition:width .5s var(--spring-soft),opacity .25s var(--ease),transform .3s var(--spring)}
-.tabs-top:active{transform:scale(.9)}
-.tabbar.min .tabs-top{width:56px;opacity:1;pointer-events:auto}
+.tabbar.no-lens .tb-lens{opacity:0}
+.tabbar.dragging .tb-lens{transform:translateX(var(--drag-x,0px));transition:scale .3s var(--spring);scale:1.06 1.1}
+/* minimised */
+.tabbar.min .tb{width:var(--mini-w);cursor:pointer}
+.tabbar.min .tb-row{transform:translateX(calc(var(--shift,0) * var(--tab-w)))}
+.tabbar.min .tab:not([aria-current=page]){opacity:0;pointer-events:none;transition:color .25s,opacity .12s var(--ease)}
+/* the accessory that takes the trailing edge: back to top */
+.tb-acc{
+  position:absolute;top:0;inset-inline-end:0;width:var(--tabs-h);height:var(--tabs-h);border-radius:50%;
+  display:grid;place-items:center;color:var(--fg);pointer-events:none;
+  opacity:0;transform:scale(.6);transition:opacity .25s var(--ease),transform .45s var(--spring);
+}
+.tabbar.min .tb-acc{opacity:1;transform:none;pointer-events:auto;transition-delay:.08s}
+.tb-acc:active{transform:scale(.9)!important}
+/* away (the event page has its own controls): the bar steps out of the way */
+.tabbar.hide .tb,.tabbar.hide .tb-acc{opacity:0;transform:translateY(calc(100% + 30px));pointer-events:none}
 
 /* ═══ overlays ═════════════════════════════════════════════════════════════ */
 .scrim{position:fixed;inset:0;z-index:80;background:var(--scrim);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);opacity:0;transition:opacity .35s}

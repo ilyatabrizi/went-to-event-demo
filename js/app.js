@@ -7,7 +7,7 @@ import { ME } from './data.js';
 import { getHost, unread, myUpcoming } from './model.js';
 import { initActions, on, toast, avatar, verified, placeAllPills, countUp, closeSheets } from './ui.js';
 import { markSvg } from './brand.js';
-import { paintNav, initGlassLight } from './nav.js';
+import { paintNav } from './nav.js';
 import { toggleTheme, initTheme, syncButtons, theme } from './theme.js';
 
 import './booking.js';
@@ -67,7 +67,7 @@ function match() {
 
 /* ───────────────────────────────────────────────────────────── the header */
 /* Rebuilt only when something it shows has changed — re-making a backdrop-filter surface on every render
-   would flicker it for no reason. Its fold state lives on #topbar, so it survives a rebuild. */
+   would flicker it for no reason. */
 let topKey = '';
 function buildTop() {
   const studio = S().mode === 'studio';
@@ -77,8 +77,8 @@ function buildTop() {
   topKey = key;
   const h = getHost(ME);
   const left = studio
-    ? `<a class="host-chip" href="#/studio" aria-label="${esc(L(h.name))} studio">${avatar(h, 34)}<span class="fold-x" style="max-width:220px;margin-inline-start:9px"><span class="nm">${esc(L(h.name))}<span class="muted st-lbl"> Studio</span></span><span style="margin-inline-start:6px">${verified(15)}</span></span></a>`
-    : `<a class="brand-btn" href="#/" aria-label="Went to Event">${markSvg('mark')}<span class="brand-name latin fold-x" style="margin-inline-start:9px">Went to Event</span></a>`;
+    ? `<a class="host-chip" href="#/studio" aria-label="${esc(L(h.name))} studio">${avatar(h, 34)}<span class="nm">${esc(L(h.name))}<span class="muted st-lbl"> Studio</span></span>${verified(15)}</a>`
+    : `<a class="brand-btn" href="#/" aria-label="Went to Event">${markSvg('mark')}<span class="brand-name latin">Went to Event</span></a>`;
   $('#topbar').innerHTML = `
     <div class="top-cap glass">
       <div class="l">${left}</div>
@@ -89,10 +89,8 @@ function buildTop() {
           <button role="tab" class="${studio ? 'on' : ''}" data-act="mode" data-mode="studio">Studio</button>
         </div>
         <button class="icon-btn theme-btn" data-act="theme" aria-label="Switch theme">${ico('sun', 20, 'sun')}${ico('moon', 20, 'moon')}</button>
-        <div class="fold-x">
-          <button class="icon-btn lang-btn" data-act="lang" aria-label="${T('زبان', 'Language')}">${isFa() ? 'EN' : 'FA'}</button>
-          ${studio ? '' : `<a class="icon-btn" href="#/inbox" aria-label="${T('اعلان‌ها', 'Notifications')}">${ico('bell', 20)}${n ? '<i class="dot"></i>' : ''}</a>`}
-        </div>
+        <button class="icon-btn lang-btn" data-act="lang" aria-label="${T('زبان', 'Language')}">${isFa() ? 'EN' : 'FA'}</button>
+        ${studio ? '' : `<a class="icon-btn" href="#/inbox" aria-label="${T('اعلان‌ها', 'Notifications')}">${ico('bell', 20)}${n ? '<i class="dot"></i>' : ''}</a>`}
       </div>
     </div>`;
   placeAllPills($('#topbar'));
@@ -128,10 +126,10 @@ function render({ keep = false } = {}) {
 
   document.title = (route.v.title ? route.v.title(...params) + ' · ' : '') + 'Went to Event';
   $('#topbar').classList.toggle('away', !!route.away);
-  $('#tabbar').classList.toggle('hide', !!route.away);
   document.body.toggleAttribute('data-away', !!route.away);
   buildTop();
   paintNav({ mode: route.mode, tab: route.tab, tickets: myUpcoming().length, open: !keep });
+  $('#tabbar').classList.toggle('hide', !!route.away);
   main.focus({ preventScroll: true });
 }
 
@@ -172,7 +170,6 @@ function boot() {
   applyLang();
   initTheme();
   initActions();
-  initGlassLight();
 
   subscribe((opts) => { if (!opts.noRender) render({ keep: true }); });
   window.addEventListener('hashchange', () => { closeSheets(); render(); });

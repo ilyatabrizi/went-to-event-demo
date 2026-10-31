@@ -144,8 +144,7 @@ export function person(name, size = 38) {
 /* ───────────────────────────────────────────────────────────── posters */
 export function poster(e, w = 480) {
   if (e.bloom) {
-    const d = dateOf(e.day);
-    return `<div class="poster bloom" style="${bloom(e.id)}"><span class="bd latin">${dNum(d)}</span></div>`;
+    return `<div class="poster bloom" style="${bloom(e.id)}"></div>`;
   }
   const key = e.img || 'workshop-table';
   const src = e.cover || `assets/jaryan/${key}-${w}.webp`;

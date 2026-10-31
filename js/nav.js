@@ -1,252 +1,169 @@
-/* The navigation chrome: a glass tab bar that folds as you read, and the header capsule that folds with it.
+/* Navigation chrome: one glass tab bar that minimises as you read, the way iOS 26 does it.
  *
- * - The lens — the lit capsule under the current tab — springs between tabs and follows a finger dragged
- *   along the bar; letting go lands on the nearest.
- * - Reading down a long page folds the tab bar to the tabs it keeps and the header to its switch and theme
- *   button. Scrolling back up, tapping the folded bar, or going anywhere opens them again.
- * - Folded, the trailing edge is taken by a back-to-top button, the way iOS 26 hands the spot to an accessory.
- * - Tapping the tab you are on scrolls to the top; from a pushed screen it goes to that tab's root.
+ * Expanded: every tab, with a lens under the current one. The lens can be dragged along the bar.
+ * Minimised (reading down a long page): the capsule shrinks to just the current tab at the leading edge and a
+ * back-to-top button appears at the trailing edge. Scrolling up, tapping the capsule, or going anywhere opens it.
  *
- * Ported from KAIRO, with the traps that came with it: one owner for geometry (JS measures, CSS reads custom
- * properties), measure only while the bar is open, never centre with a transform above a backdrop-filter,
- * and treat a cancelled pointer as "put it back".
+ * Why it is built this way — every earlier glitch came from layout moving while it animated:
+ * - Tabs never change size. They sit in a row of fixed width; minimising only narrows the capsule that clips the
+ *   row and slides the row so the current tab is the one left showing. Nothing reflows, nothing squashes.
+ * - All geometry is CSS (custom properties from the viewport); JS only says which tab is current and whether the
+ *   bar is minimised. Nothing is ever measured in the middle of a transition.
+ * - No transform, filter or opacity on any ancestor of the glass, so the blur keeps working while it moves.
  */
-import { S } from './store.js';
 import { ico } from './icons.js';
 import { on } from './ui.js';
 
 const SETS = {
-  attendee: {
-    keep: ['discover', 'me'],
-    tabs: [
-      { id: 'discover', href: '#/',        icon: 'discover', label: 'Discover' },
-      { id: 'explore',  href: '#/explore', icon: 'search',   label: 'Search' },
-      { id: 'tickets',  href: '#/tickets', icon: 'ticket',   label: 'Tickets' },
-      { id: 'me',       href: '#/me',      icon: 'user',     label: 'You' },
-    ],
-  },
-  studio: {
-    keep: ['overview'],
-    tabs: [
-      { id: 'overview',  href: '#/studio',           icon: 'grid',      label: 'Overview' },
-      { id: 'events',    href: '#/studio/events',    icon: 'calendar',  label: 'Events' },
-      { id: 'audience',  href: '#/studio/audience',  icon: 'users',     label: 'Audience' },
-      { id: 'broadcast', href: '#/studio/broadcast', icon: 'megaphone', label: 'Broadcast' },
-      { id: 'page',      href: '#/studio/page',      icon: 'page',      label: 'Page' },
-    ],
-  },
+  attendee: [
+    { id: 'discover', href: '#/',        icon: 'discover', label: 'Discover' },
+    { id: 'explore',  href: '#/explore', icon: 'search',   label: 'Search' },
+    { id: 'tickets',  href: '#/tickets', icon: 'ticket',   label: 'Tickets' },
+    { id: 'me',       href: '#/me',      icon: 'user',     label: 'You' },
+  ],
+  studio: [
+    { id: 'overview',  href: '#/studio',           icon: 'grid',      label: 'Overview' },
+    { id: 'events',    href: '#/studio/events',    icon: 'calendar',  label: 'Events' },
+    { id: 'audience',  href: '#/studio/audience',  icon: 'users',     label: 'Audience' },
+    { id: 'broadcast', href: '#/studio/broadcast', icon: 'megaphone', label: 'Broadcast' },
+    { id: 'page',      href: '#/studio/page',      icon: 'page',      label: 'Page' },
+  ],
 };
 
 const $ = (s) => document.querySelector(s);
-const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const reduced = () => matchMedia('(prefers-reduced-motion:reduce)').matches;
-const haptic = (ms = 4) => { try { navigator.vibrate?.(ms); } catch (_) { /* not everywhere */ } };
-const PAD = 6;
+const haptic = () => { try { navigator.vibrate?.(4); } catch (_) { /* not everywhere */ } };
+const rtl = () => document.documentElement.dir === 'rtl';
 
-let bar, caps, row, tabs = [];
-let mode = null, active = null, minimized = false;
-let tabW = 0, rowW = 0;
-let badges = {};
+let bar = null, caps = null, row = null, tabs = [];
+let mode = null, dir = null, active = -1, minimized = false;
 
 /* ───────────────────────────────────────────────────────────── build */
 function build(m) {
   const set = SETS[m];
   bar = $('#tabbar');
-  bar.dataset.mode = m;
-  bar.dataset.ready = '';
-  bar.classList.remove('min', 'dragging');
-  bar.style.removeProperty('--tab-w'); bar.style.removeProperty('--row-w'); bar.style.removeProperty('--kept-n');
+  bar.className = 'tabbar';
+  bar.style.setProperty('--n', String(set.length));
   bar.innerHTML = `
-    <div class="tabbar-in" style="--n:${set.tabs.length}">
-      <div class="tabs glass" id="tabs">
-        <div class="tabs-row" id="tabs-row">
-          <span class="tabs-lens"></span>
-          ${set.tabs.map((t) => `
-            <a class="tab" href="${t.href}" data-tab="${t.id}" aria-label="${t.label}" draggable="false">
+    <div class="tabbar-in">
+      <div class="tb glass" id="tabs">
+        <div class="tb-row" id="tabs-row">
+          <span class="tb-lens" aria-hidden="true"></span>
+          ${set.map((t, i) => `
+            <a class="tab" href="${t.href}" data-tab="${t.id}" data-i="${i}" aria-label="${t.label}" draggable="false">
               <span class="tab-ico">${ico(t.icon, 22)}</span><span class="tab-label">${t.label}</span>
             </a>`).join('')}
         </div>
       </div>
-      <button class="tabs-top glass" data-act="toTop" aria-label="Back to top" tabindex="-1">${ico('toTop', 22)}</button>
+      <button class="tb-acc glass" data-act="toTop" aria-label="Back to top" tabindex="-1">${ico('toTop', 21)}</button>
     </div>`;
   caps = $('#tabs'); row = $('#tabs-row');
   tabs = [...row.querySelectorAll('.tab')];
-  mode = m;
-  minimized = false;
-  tabW = 0; rowW = 0;
-  bindDrag();
+  mode = m; dir = rtl(); active = -1; minimized = false;
+  bindPointer();
 }
 
-/* ─────────────────────────────────────────────────────────── geometry */
-/* Folded, the bar keeps the first tab, the "You" tab, and whichever tab you are actually on. */
-const keptKeys = () => tabs.map((t) => t.dataset.tab).filter((k) => SETS[mode].keep.includes(k) || k === active);
-
+/* The lens is placed in physical slots (left → right), so RTL just counts from the other end. */
 function place() {
-  if (!bar || !tabs.length) return;
-  const i = tabs.findIndex((t) => t.dataset.tab === active);
-  if (i < 0) { bar.classList.add('no-lens'); return; }
-  bar.classList.remove('no-lens');
-
-  /* Measured ONLY while the bar is open — a tab in the middle of collapsing would feed a wrong number back
-     into the width that is doing the collapsing. */
-  if (!minimized) {
-    const w = caps.getBoundingClientRect().width;
-    if (w > 40) { rowW = w - PAD * 2; tabW = rowW / tabs.length; }
-  }
-  if (!tabW) return;
-
-  const kept = keptKeys();
-  tabs.forEach((t) => { if (kept.includes(t.dataset.tab)) t.dataset.keep = '1'; else delete t.dataset.keep; });
-
-  /* The lens is one tab wide in both states; only which slot it sits in changes — and the slot is counted
-     from the leading edge, which is the right in Persian. */
-  const slot = minimized ? kept.indexOf(active) : i;
-  const rtl = document.documentElement.dir === 'rtl';
-  const x = rtl ? rowW - (slot + 1) * tabW : slot * tabW;
-  bar.style.setProperty('--tab-w', `${tabW}px`);
-  bar.style.setProperty('--row-w', `${rowW}px`);
-  bar.style.setProperty('--kept-n', String(kept.length));
-  bar.style.setProperty('--lens-x', `${x}px`);
-  bar.style.setProperty('--lens-w', `${tabW}px`);
-  bar.dataset.ready = '1';
+  if (!bar) return;
+  const n = tabs.length;
+  bar.classList.toggle('no-lens', active < 0);
+  const i = Math.max(0, active);
+  bar.style.setProperty('--li', String(rtl() ? n - 1 - i : i));
+  /* minimised: slide the row so the current tab sits at the leading edge of the narrowed capsule */
+  bar.style.setProperty('--shift', String(rtl() ? i : -i));
 }
 
 /* ───────────────────────────────────────────────────────────── paint */
-/* Called on every render. `open` is true when arriving somewhere, false on a state refresh in place. */
 export function paintNav({ mode: m, tab, tickets = 0, open = true }) {
-  if (mode !== m || !tabs.length) build(m);
-  active = tab;
-  tabs.forEach((t) => {
-    const cur = t.dataset.tab === tab;
-    if (cur) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
-  });
-  badges = { tickets };
-  tabs.forEach((t) => {
-    const b = t.querySelector('.badge'); const n = badges[t.dataset.tab] || 0;
+  if (mode !== m || dir !== rtl() || !tabs.length) build(m);
+  active = tabs.findIndex((t) => t.dataset.tab === tab);
+  tabs.forEach((t, i) => {
+    if (i === active) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+    const b = t.querySelector('.badge');
+    const n = t.dataset.tab === 'tickets' ? tickets : 0;
     if (n && !b) t.insertAdjacentHTML('beforeend', `<span class="badge">${n}</span>`);
     else if (b) { if (n) b.textContent = n; else b.remove(); }
   });
+  place();
   if (open) setMin(false);
-  requestAnimationFrame(place);
 }
 export const expand = () => setMin(false);
 
-/* ──────────────────────────────────────────────────────── fold on scroll */
+/* ──────────────────────────────────────────────────────── minimise on scroll */
+function canMin() {
+  return active >= 0 && innerWidth < 900 && !document.body.hasAttribute('data-away')
+    && document.documentElement.scrollHeight - innerHeight > 600;   // never on a page you can already see the end of
+}
 function setMin(v) {
-  /* Never fold a page you can see the end of — the bars would close and reopen on one flick. */
-  if (v && (!active || document.documentElement.scrollHeight - innerHeight < 700 || document.body.hasAttribute('data-away'))) return;
-  if (v === minimized) return;
+  if (v && !canMin()) return;
+  if (v === minimized || !bar) return;
   minimized = v;
-  bar?.classList.toggle('min', v);
-  $('#topbar')?.classList.toggle('min', v);
-  const tp = $('.tabs-top'); if (tp) tp.tabIndex = v ? 0 : -1;
-  place();
+  bar.classList.toggle('min', v);
+  const acc = bar.querySelector('.tb-acc'); if (acc) acc.tabIndex = v ? 0 : -1;
+  caps?.setAttribute('aria-label', v ? 'Show all tabs' : 'Tabs');
 }
 
-let lastY = scrollY, run = 0;
+let lastY = 0, run = 0;
 addEventListener('scroll', () => {
   const y = scrollY, dy = y - lastY;
   lastY = y;
-  if (y < 120) { run = 0; setMin(false); return; }
-  /* accumulate travel in one direction so a jittery finger does not toggle the bars every frame */
-  run = Math.sign(dy) === Math.sign(run) ? run + dy : dy;
-  if (run > 48) setMin(true);
-  else if (run < -28) setMin(false);
+  if (y < 80) { run = 0; setMin(false); return; }
+  /* travel has to add up in one direction, so a wobbly thumb never flips the bar back and forth */
+  run = (dy > 0) === (run > 0) ? run + dy : dy;
+  if (run > 60) setMin(true);
+  else if (run < -40) setMin(false);
 }, { passive: true });
-addEventListener('resize', () => { if (minimized) { minimized = false; bar?.classList.remove('min'); $('#topbar')?.classList.remove('min'); } place(); });
 
-on({
-  toTop() { scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' }); },
-});
+on({ toTop() { scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' }); } });
 
-/* ───────────────────────────────────────────────────── drag the lens */
-let drag = null, swallow = false, dragBound = null;
-function bindDrag() {
-  if (dragBound === caps) return;
-  dragBound = caps;
-
-  /* The tabs are links, and a mouse dragged across a link starts the browser's own drag — which fires
-     pointercancel on the first move and kills ours. Touch never shows this; only a mouse does. */
-  caps.addEventListener('dragstart', (e) => e.preventDefault());
+/* ───────────────────────────────────────────── tap, re-tap, and drag the lens */
+let drag = null, swallow = false;
+function bindPointer() {
+  caps.addEventListener('dragstart', (e) => e.preventDefault());   // a mouse drag over a link starts the browser's own drag
 
   caps.addEventListener('pointerdown', (e) => {
-    if (minimized || e.button > 0 || !tabs.length) return;
-    drag = { x0: e.clientX, id: e.pointerId, moved: false, idx: -1 };
+    if (minimized || e.button > 0) return;
+    drag = { x0: e.clientX, id: e.pointerId, moved: false, idx: active };
   });
   caps.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
-    const dx = e.clientX - drag.x0;
     if (!drag.moved) {
-      if (Math.abs(dx) < 8) return;
+      if (Math.abs(e.clientX - drag.x0) < 10) return;
       drag.moved = true;
       try { caps.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
       bar.classList.add('dragging');
-      bar.classList.remove('no-lens');
     }
-    const w = tabW || tabs[0].offsetWidth;
-    const r = row.getBoundingClientRect();
-    const x = clamp(e.clientX - r.left - w / 2, 0, r.width - w);     // physical left within the row, either direction
-    bar.style.setProperty('--lens-x', `${x}px`);
-    bar.style.setProperty('--lens-w', `${w}px`);
-    let idx = 0, best = Infinity;
-    tabs.forEach((t, i) => {
-      const tr = t.getBoundingClientRect(); const d = Math.abs(tr.left + tr.width / 2 - e.clientX);
-      if (d < best) { best = d; idx = i; }
-    });
-    if (idx !== drag.idx) {
-      drag.idx = idx; haptic(4);
-      tabs.forEach((t, i) => t.classList.toggle('under', i === idx));
-    }
+    const r = row.getBoundingClientRect(), w = r.width / tabs.length;
+    const x = Math.min(r.width - w, Math.max(0, e.clientX - r.left - w / 2));
+    bar.style.setProperty('--drag-x', `${x}px`);
+    const slot = Math.round(x / w);
+    const idx = rtl() ? tabs.length - 1 - slot : slot;
+    if (idx !== drag.idx) { drag.idx = idx; haptic(); tabs.forEach((t, i) => t.classList.toggle('under', i === idx)); }
   });
-  const clear = () => { bar.classList.remove('dragging'); tabs.forEach((t) => t.classList.remove('under')); };
-  caps.addEventListener('pointerup', () => {
+  const end = (go) => {
     if (!drag) return;
-    const d = drag; drag = null; clear();
+    const d = drag; drag = null;
+    bar.classList.remove('dragging');
+    tabs.forEach((t) => t.classList.remove('under'));
     if (!d.moved) return;
-    /* the click that follows the release must not also navigate */
-    swallow = true; setTimeout(() => { swallow = false; }, 0);
+    swallow = true; setTimeout(() => { swallow = false; }, 0);   // the click that follows a drag must not navigate too
     const t = tabs[d.idx];
-    if (t && location.hash !== t.getAttribute('href')) location.hash = t.getAttribute('href');
-    else place();
-  });
-  /* a cancelled pointer — a system gesture taking over — puts the lens back and goes nowhere */
-  caps.addEventListener('pointercancel', () => { drag = null; clear(); place(); });
+    if (go && t && d.idx !== active) location.hash = t.getAttribute('href');
+  };
+  caps.addEventListener('pointerup', () => end(true));
+  caps.addEventListener('pointercancel', () => end(false));      // a system gesture took over: put it back, go nowhere
 
   caps.addEventListener('click', (e) => {
     if (swallow) { e.preventDefault(); e.stopPropagation(); return; }
-    /* a folded bar opens on tap instead of navigating — the tabs you cannot see are the ones you would aim at */
-    if (minimized) { e.preventDefault(); e.stopPropagation(); setMin(false); return; }
+    if (minimized) { e.preventDefault(); e.stopPropagation(); setMin(false); return; }   // minimised: a tap opens it
     const t = e.target.closest('.tab');
     if (!t) return;
-    haptic(4);
+    haptic();
     const here = '#' + (location.hash.replace(/^#/, '') || '/');
-    if (t.getAttribute('href') === here) {
+    if (t.getAttribute('href') === here) {                        // already here: back to the top instead
       e.preventDefault();
       scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' });
     }
   }, true);
-}
-
-/* ─────────────────────────────────────── the light on glass follows you */
-export function initGlassLight() {
-  let raf = 0, el = null, px = 0, py = 0;
-  const paint = () => {
-    raf = 0; if (!el) return;
-    const r = el.getBoundingClientRect();
-    el.style.setProperty('--mx', `${px - r.left}px`);
-    el.style.setProperty('--my', `${py - r.top}px`);
-  };
-  const set = (e) => {
-    const g = e.target.closest?.('.glass,.glass-thin,.glass-thick');
-    if (g !== el) { el?.removeAttribute('data-lit'); el = g || null; el?.setAttribute('data-lit', ''); }
-    if (!el) return;
-    px = e.clientX; py = e.clientY;
-    if (!raf) raf = requestAnimationFrame(paint);
-  };
-  document.addEventListener('pointermove', set, { passive: true });
-  document.addEventListener('pointerdown', set, { passive: true });
-  const off = () => { el?.removeAttribute('data-lit'); el = null; };
-  document.addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') off(); }, { passive: true });
-  document.addEventListener('pointerleave', off, { passive: true });
-  document.addEventListener('pointercancel', off, { passive: true });
 }
