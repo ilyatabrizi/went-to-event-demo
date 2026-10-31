@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Went to Event</title>
+<meta name="description" content="Went to Event — the platform where event hosts run their page, their guests and their door. Demo with Jaryan, Tabriz.">
+<meta name="theme-color" content="#0E0B10">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Went to Event">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Went to Event — host platform demo">
+<meta property="og:description" content="Where event hosts run their page, their guests and their door. Live demo with Jaryan, Tabriz.">
+<meta property="og:url" content="https://ilyatabrizi.github.io/went-to-event-demo/">
+<meta property="og:image" content="https://ilyatabrizi.github.io/went-to-event-demo/assets/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ilyatabrizi.github.io/went-to-event-demo/assets/img/og.jpg">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/icons/icon-180.png">
+<link rel="preload" href="assets/fonts/IRANYekanXFaNum-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/IRANYekanXFaNum-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Outfit-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/ui.css">
+<link rel="stylesheet" href="css/attendee.css">
+<link rel="stylesheet" href="css/studio.css">
+<script>
+/* set language + direction before first paint */
+(function () {
+  try {
+    var q = new URLSearchParams(location.search).get('lang');
+    var s = JSON.parse(localStorage.getItem('wte.v1') || 'null');
+    var l = (q === 'en' || q === 'fa') ? q : (s && s.lang) || 'fa';
+    document.documentElement.lang = l;
+    document.documentElement.dir = l === 'fa' ? 'rtl' : 'ltr';
+  } catch (e) {}
+})();
+</script>
+</head>
+<body>
+<div id="boot" aria-hidden="true">
+  <div class="b-logo"><img src="assets/brand/logo-photo.webp" alt=""></div>
+  <div class="b-sub micro latin">Went to Event</div>
+</div>
+<header id="topbar" class="topbar glass"></header>
+<main id="view" tabindex="-1"></main>
+<div id="dock"></div>
+<nav id="tabbar" class="tabbar glass" aria-label="Primary"></nav>
+<div id="overlay"></div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<noscript><p style="padding:40px;text-align:center">Went to Event needs JavaScript.</p></noscript>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
