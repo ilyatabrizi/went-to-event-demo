@@ -6,12 +6,13 @@ import { esc, ago } from '../util.js';
 import { getHost } from '../model.js';
 import { avatar, empty, on } from '../ui.js';
 import { navigate } from '../app.js';
+import { markSvg } from '../brand.js';
 
 export const title = () => T('اعلان‌ها', 'Inbox');
 
 const who = (n) => {
   const h = n.host ? getHost(n.host) : null;
-  return h ? avatar(h, 42) : `<span class="av wte-av" style="width:42px;height:42px"><img src="assets/brand/mark-bone.svg" alt="" style="width:24px;height:auto"></span>`;
+  return h ? avatar(h, 42) : `<span class="av wte-av" style="width:42px;height:42px">${markSvg('wte-mark')}</span>`;
 };
 const name = (n) => (n.host ? L(getHost(n.host)?.name) : 'Went to Event');
 

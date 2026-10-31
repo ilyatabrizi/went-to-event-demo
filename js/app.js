@@ -5,7 +5,10 @@ import { ico } from './icons.js';
 import { esc } from './util.js';
 import { ME } from './data.js';
 import { getHost, unread, myUpcoming } from './model.js';
-import { initActions, on, toast, avatar, verified, placeAllPills, placePill, countUp, closeSheets, hasSheet } from './ui.js';
+import { initActions, on, toast, avatar, verified, placeAllPills, countUp, closeSheets } from './ui.js';
+import { markSvg } from './brand.js';
+import { paintNav, initGlassLight } from './nav.js';
+import { toggleTheme, initTheme, syncButtons, theme } from './theme.js';
 
 import './booking.js';
 import './cards.js';
@@ -16,6 +19,7 @@ import * as host from './views/host.js';
 import * as tickets from './views/tickets.js';
 import * as me from './views/me.js';
 import * as inbox from './views/inbox.js';
+import * as system from './views/system.js';
 import * as overview from './studio/overview.js';
 import * as sevents from './studio/events.js';
 import * as smanage from './studio/manage.js';
@@ -31,6 +35,7 @@ const ROUTES = [
   { re: /^\/tickets$/,              v: tickets,    mode: 'attendee', tab: 'tickets' },
   { re: /^\/me$/,                   v: me,         mode: 'attendee', tab: 'me' },
   { re: /^\/inbox$/,                v: inbox,      mode: 'attendee', tab: 'me' },
+  { re: /^\/system$/,               v: system,     mode: 'attendee', tab: 'me' },
   { re: /^\/studio\/?$/,            v: overview,   mode: 'studio',   tab: 'overview' },
   { re: /^\/studio\/events$/,       v: sevents,    mode: 'studio',   tab: 'events' },
   { re: /^\/studio\/events\/([\w-]+)$/, v: smanage, mode: 'studio',  tab: 'events' },
@@ -38,22 +43,6 @@ const ROUTES = [
   { re: /^\/studio\/broadcast$/,    v: sbroadcast, mode: 'studio',   tab: 'broadcast' },
   { re: /^\/studio\/page$/,         v: spage,      mode: 'studio',   tab: 'page' },
 ];
-const TAB_SETS = {
-  attendee: [
-    { id: 'discover', href: '#/',        icon: 'discover', fa: 'کشف',     en: 'Discover' },
-    { id: 'explore',  href: '#/explore', icon: 'search',   fa: 'جستجو',   en: 'Search' },
-    { id: 'tickets',  href: '#/tickets', icon: 'ticket',   fa: 'بلیت‌ها', en: 'Tickets' },
-    { id: 'me',       href: '#/me',      icon: 'user',     fa: 'من',      en: 'You' },
-  ],
-  studio: [
-    { id: 'overview',  href: '#/studio',           icon: 'grid',      fa: 'نمای کلی', en: 'Overview' },
-    { id: 'events',    href: '#/studio/events',    icon: 'calendar',  fa: 'رویدادها', en: 'Events' },
-    { id: 'audience',  href: '#/studio/audience',  icon: 'users',     fa: 'مخاطبان',  en: 'Audience' },
-    { id: 'broadcast', href: '#/studio/broadcast', icon: 'megaphone', fa: 'پیام‌ها',   en: 'Broadcast' },
-    { id: 'page',      href: '#/studio/page',      icon: 'page',      fa: 'صفحه',     en: 'Page' },
-  ],
-};
-
 const $ = (s) => document.querySelector(s);
 let cur = null;            // { route, params }
 let dispose = null;
@@ -76,58 +65,38 @@ function match() {
   return { route: ROUTES[0], params: [], path: '/' };
 }
 
-/* ───────────────────────────────────────────────────────────── the bars */
+/* ───────────────────────────────────────────────────────────── the header */
+/* Rebuilt only when something it shows has changed — re-making a backdrop-filter surface on every render
+   would flicker it for no reason. Its fold state lives on #topbar, so it survives a rebuild. */
+let topKey = '';
 function buildTop() {
   const studio = S().mode === 'studio';
+  const n = unread();
+  const key = [S().mode, S().lang, n ? 1 : 0, theme()].join('|');
+  if (key === topKey && $('#topbar').firstChild) return;
+  topKey = key;
   const h = getHost(ME);
   const left = studio
-    ? `<a class="host-chip" href="#/studio">${avatar(h, 34)}<span class="nm">${esc(L(h.name))}<span class="muted st-lbl"> ${T('استودیو', 'Studio')}</span></span>${verified(15)}</a>`
-    : `<a class="brand-btn" href="#/" aria-label="Went to Event"><img class="mark" src="assets/brand/mark-bone.svg" alt=""><span class="brand-name latin">Went to Event</span></a>`;
-  const n = unread();
+    ? `<a class="host-chip" href="#/studio" aria-label="${esc(L(h.name))} studio">${avatar(h, 34)}<span class="fold-x" style="max-width:220px;margin-inline-start:9px"><span class="nm">${esc(L(h.name))}<span class="muted st-lbl"> Studio</span></span><span style="margin-inline-start:6px">${verified(15)}</span></span></a>`
+    : `<a class="brand-btn" href="#/" aria-label="Went to Event">${markSvg('mark')}<span class="brand-name latin fold-x" style="margin-inline-start:9px">Went to Event</span></a>`;
   $('#topbar').innerHTML = `
-    <div class="l">${left}</div>
-    <div class="r">
-      <div class="seg mode-seg" role="tablist" aria-label="${T('حالت', 'Mode')}">
-        <span class="seg-pill"></span>
-        <button role="tab" class="${studio ? '' : 'on'}" data-act="mode" data-mode="attendee">${T('کاوش', 'Explore')}</button>
-        <button role="tab" class="${studio ? 'on' : ''}" data-act="mode" data-mode="studio">${T('استودیو', 'Studio')}</button>
+    <div class="top-cap glass">
+      <div class="l">${left}</div>
+      <div class="r">
+        <div class="seg mode-seg" role="tablist" aria-label="Mode">
+          <span class="seg-pill"></span>
+          <button role="tab" class="${studio ? '' : 'on'}" data-act="mode" data-mode="attendee">Explore</button>
+          <button role="tab" class="${studio ? 'on' : ''}" data-act="mode" data-mode="studio">Studio</button>
+        </div>
+        <button class="icon-btn theme-btn" data-act="theme" aria-label="Switch theme">${ico('sun', 20, 'sun')}${ico('moon', 20, 'moon')}</button>
+        <div class="fold-x">
+          <button class="icon-btn lang-btn" data-act="lang" aria-label="${T('زبان', 'Language')}">${isFa() ? 'EN' : 'FA'}</button>
+          ${studio ? '' : `<a class="icon-btn" href="#/inbox" aria-label="${T('اعلان‌ها', 'Notifications')}">${ico('bell', 20)}${n ? '<i class="dot"></i>' : ''}</a>`}
+        </div>
       </div>
-      <button class="icon-btn lang-btn" data-act="lang" aria-label="${T('زبان', 'Language')}">${isFa() ? 'EN' : 'FA'}</button>
-      ${studio ? '' : `<a class="icon-btn" href="#/inbox" aria-label="${T('اعلان‌ها', 'Notifications')}">${ico('bell', 21)}${n ? '<i class="dot"></i>' : ''}</a>`}
     </div>`;
   placeAllPills($('#topbar'));
-}
-
-let builtMode = null, builtLang = null;
-function buildTabs(activeTab) {
-  const mode = S().mode;
-  const tabs = TAB_SETS[mode];
-  const bar = $('#tabbar');
-  const tick = myUpcoming().length;
-  if (builtMode !== mode || builtLang !== S().lang || !bar.firstChild) {
-    bar.innerHTML = `<span class="tab-pill snap"></span>` + tabs.map((t) => `
-      <a class="tab" href="${t.href}" data-tab="${t.id}" aria-label="${isFa() ? t.fa : t.en}">
-        ${ico(t.icon, 22)}<span class="lbl">${isFa() ? t.fa : t.en}</span>
-        ${t.id === 'tickets' && tick ? `<span class="badge">${tick}</span>` : ''}
-      </a>`).join('');
-    builtMode = mode; builtLang = S().lang;
-  } else {
-    const b = bar.querySelector('[data-tab="tickets"] .badge');
-    const t = bar.querySelector('[data-tab="tickets"]');
-    if (t) { if (tick && !b) t.insertAdjacentHTML('beforeend', `<span class="badge">${tick}</span>`); else if (b) { if (tick) b.textContent = tick; else b.remove(); } }
-  }
-  bar.querySelectorAll('.tab').forEach((t) => { const on_ = t.dataset.tab === activeTab; t.classList.toggle('on', on_); if (on_) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
-  placeTabPill();
-}
-function placeTabPill(snap = false) {
-  const bar = $('#tabbar'), pill = bar.querySelector('.tab-pill'), t = bar.querySelector('.tab.on');
-  if (!pill || !t) return;
-  const first = !pill.dataset.set;
-  if (snap || first) pill.classList.add('snap');
-  pill.style.width = t.offsetWidth + 'px';
-  pill.style.transform = `translateX(${t.offsetLeft}px)`;
-  pill.dataset.set = '1';
-  if (snap || first) { pill.offsetWidth; pill.classList.remove('snap'); }
+  syncButtons();
 }
 
 /* ────────────────────────────────────────────────────────────── render */
@@ -160,8 +129,9 @@ function render({ keep = false } = {}) {
   document.title = (route.v.title ? route.v.title(...params) + ' · ' : '') + 'Went to Event';
   $('#topbar').classList.toggle('away', !!route.away);
   $('#tabbar').classList.toggle('hide', !!route.away);
+  document.body.toggleAttribute('data-away', !!route.away);
   buildTop();
-  buildTabs(route.tab);
+  paintNav({ mode: route.mode, tab: route.tab, tickets: myUpcoming().length, open: !keep });
   main.focus({ preventScroll: true });
 }
 
@@ -176,9 +146,12 @@ on({
   },
   lang() {
     setLang(isFa() ? 'en' : 'fa');
-    builtLang = null;
     render({ keep: true });
     toast(T('زبان: فارسی', 'Language: English'), 'globe');
+  },
+  theme(el) {
+    const r = el.getBoundingClientRect();
+    toggleTheme({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
   },
   resetDemo() { doReset(); },
 });
@@ -186,7 +159,7 @@ export function doReset() {
   resetAll();
   closeSheets();
   applyLang();
-  builtLang = null;
+  topKey = '';
   navigate('/', true);
   render();
   toast(T('دمو به حالت اول برگشت', 'Demo reset'), 'refresh');
@@ -197,11 +170,13 @@ function boot() {
   const q = new URLSearchParams(location.search).get('lang');
   if (q === 'en' || q === 'fa') setLang(q);
   applyLang();
+  initTheme();
   initActions();
+  initGlassLight();
 
   subscribe((opts) => { if (!opts.noRender) render({ keep: true }); });
   window.addEventListener('hashchange', () => { closeSheets(); render(); });
-  window.addEventListener('resize', () => { placeTabPill(true); placeAllPills($('#topbar'), true); placeAllPills($('#view'), true); });
+  window.addEventListener('resize', () => { placeAllPills($('#topbar'), true); placeAllPills($('#view'), true); });
   history.scrollRestoration = 'manual';
 
   if (!location.hash) location.hash = '#/';
@@ -217,6 +192,6 @@ function boot() {
   if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !/localhost|127\.0\.0\.1/.test(location.hostname)) {
     navigator.serviceWorker.register('sw.js').catch(() => { /* offline shell is a nicety */ });
   }
-  document.fonts?.ready.then(() => { placeTabPill(true); placeAllPills(document, true); });
+  document.fonts?.ready.then(() => { placeAllPills(document, true); });
 }
 boot();

@@ -40,6 +40,15 @@
     document.documentElement.lang = l;
     document.documentElement.dir = l === 'fa' ? 'rtl' : 'ltr';
   } catch (e) {}
+  /* theme before first paint: ?theme= > saved choice > dark (the brand's own) */
+  try {
+    var qt = new URLSearchParams(location.search).get('theme');
+    var t = (qt === 'light' || qt === 'dark') ? qt : localStorage.getItem('wte.theme');
+    t = t === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+    var m = document.querySelector('meta[name=theme-color]');
+    if (m) m.setAttribute('content', t === 'light' ? '#F4F0E9' : '#0E0B10');
+  } catch (e) { document.documentElement.dataset.theme = 'dark'; }
 })();
 </script>
 </head>
@@ -48,10 +57,13 @@
   <div class="b-logo"><img src="assets/brand/logo-photo.webp" alt=""></div>
   <div class="b-sub micro latin">Went to Event</div>
 </div>
-<header id="topbar" class="topbar glass"></header>
+<div id="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="edge edge-t" aria-hidden="true"></div>
+<header id="topbar" class="topbar"></header>
 <main id="view" tabindex="-1"></main>
 <div id="dock"></div>
-<nav id="tabbar" class="tabbar glass" aria-label="Primary"></nav>
+<div class="edge edge-b" aria-hidden="true"></div>
+<nav id="tabbar" class="tabbar" aria-label="Primary"></nav>
 <div id="overlay"></div>
 <div id="toasts" class="toasts" aria-live="polite"></div>
 <noscript><p style="padding:40px;text-align:center">Went to Event needs JavaScript.</p></noscript>

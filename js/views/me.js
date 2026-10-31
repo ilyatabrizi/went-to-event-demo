@@ -54,7 +54,8 @@ export function render() {
     <h2 class="h2 sub-h">${T('تنظیمات', 'Settings')}</h2>
     <div class="list">
       <a class="li" href="#/inbox"><span class="li-ico">${ico('bell', 19)}</span><div class="grow"><div class="li-t">${T('اعلان‌ها', 'Inbox')}</div><div class="li-s">${n ? T(`${nf(n)} خوانده‌نشده`, `${n} unread`) : T('همه خوانده شده', 'All read')}</div></div>${ico('chev', 18, 'chev')}</a>
-      <div class="li"><span class="li-ico">${ico('globe', 19)}</span><div class="grow"><div class="li-t">${T('زبان', 'Language')}</div><div class="li-s">${T('فارسی یا English', 'Persian or English')}</div></div>
+      <a class="li" href="#/system"><span class="li-ico">${ico('spark', 19)}</span><div class="grow"><div class="li-t">${T('سیستم طراحی', 'Design system')}</div><div class="li-s">${T('رنگ، شیشه، نوشتار و حرکت', 'Colour, glass, type and motion')}</div></div>${ico('chev', 18, 'chev')}</a>
+      <div class="li"><span class="li-ico">${ico('globe', 19)}</span></span><div class="grow"><div class="li-t">${T('زبان', 'Language')}</div><div class="li-s">${T('فارسی یا English', 'Persian or English')}</div></div>
         <div class="seg lang-seg"><span class="seg-pill"></span>
           <button class="${isFa() ? 'on' : ''}" ${isFa() ? '' : 'data-act="lang"'}>فارسی</button>
           <button class="latin ${isFa() ? '' : 'on'}" ${isFa() ? 'data-act="lang"' : ''}>English</button>

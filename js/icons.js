@@ -48,6 +48,9 @@ const P = {
   dots: '<circle cx="6" cy="12" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="18" cy="12" r="1.2" fill="currentColor"/>',
   cup: '<path d="M6 8h10v4.5A5 5 0 0 1 11 17.5 5 5 0 0 1 6 12.5zM16 9.5h1.5a2 2 0 0 1 0 4H16M5 20.5h12"/>',
   play: '<path d="M8 5.5v13l11-6.5z" fill="currentColor" stroke="none"/>',
+  sun: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.1M12 19.1v2.1M2.8 12h2.1M19.1 12h2.1M5.5 5.5l1.5 1.5M17 17l1.5 1.5M5.5 18.5L7 17M17 7l1.5-1.5"/>',
+  moon: '<path d="M20 14.4A8.3 8.3 0 1 1 9.6 4a6.7 6.7 0 0 0 10.4 10.4z"/>',
+  toTop: '<path d="M12 19V6M6.5 11.5L12 6l5.5 5.5"/>',
 };
 const DIR = new Set(['chev', 'back', 'arrow', 'up', 'send']);
 
