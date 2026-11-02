@@ -1,7 +1,7 @@
 {
   "name": "Went to Event",
   "short_name": "Went to Event",
-  "description": "The platform where event hosts run their page, their guests and their door. Demo with Jaryan, Tabriz.",
+  "description": "رویدادهای خلاق تبریز؛ پیدا کن، با دو تا تپ رزرو کن و فقط بیا. میزبان‌ها صفحه، بلیت و مخاطب‌هاشونو از یه پنل مدیریت می‌کنن.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

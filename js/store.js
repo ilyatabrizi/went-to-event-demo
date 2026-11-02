@@ -1,12 +1,16 @@
-/* One localStorage blob. No server, no accounts: this is a clickable prototype,
-   and a "Reset demo" in Profile wipes it. */
+/* One localStorage blob holds everything this browser has done: the visitor's bookings, follows and reviews,
+   and — once a host signs in — the host's panel data. `?reset` in the URL wipes it. */
 const KEY = 'wte.v1';
 
 const fresh = () => ({
   v: 1,
   lang: 'fa',
   mode: 'attendee',            // 'attendee' | 'studio'
-  user: { name: '', phone: '09145550142' },
+  user: { name: '', phone: '' },
+  auth: null,                  // { host, at } once a host signs in
+  howDismissed: false,         // the first-visit "how it works" strip
+  reviews: [],                 // { id, host, event, name, stars, text, ts } written by this visitor
+  hostRequests: [],            // "become a host" requests sent from the login page
   following: [],
   saved: [],
   followedAt: {},
@@ -21,7 +25,14 @@ const fresh = () => ({
     notes: {},                 // contactId -> text
     tags: {},                  // contactId -> [tag]
     broadcasts: [],
-    page: { about: null, tagline: null, pinned: 'summer', showAbout: true, showGallery: true, showFaq: true },
+    page: { about: null, tagline: null, pinned: 'summer', showAbout: true, showGallery: true, showFaq: true, showReviews: true,
+            phone: '', telegram: '', instagram: 'jaryanplat', website: 'https://ilyatabrizi.github.io/jaryan/' },
+    codes: null,               // discount codes (null = the seeded set)
+    replies: {},               // reviewId -> host reply
+    hiddenReviews: [],
+    payouts: [],               // payout requests the host sends
+    sharedPage: false,         // getting-started: shared the page link
+    setupHidden: false,
     introDismissed: false,
   },
   seeded: false,
@@ -55,15 +66,16 @@ function save() {
 }
 
 state = load();
+if (new URLSearchParams(location.search).has('reset')) { try { localStorage.removeItem(KEY); } catch (_) { /* ignore */ } state = fresh(); }
 
 /* first-ever visit: one welcome note so the bell has something honest in it */
 if (!state.seeded) {
   state.seeded = true;
   state.inbox.push({
     id: 'welcome', ts: Date.now() - 6 * 60e3, kind: 'platform', host: null,
-    title: { fa: 'به Went to Event خوش آمدی', en: 'Welcome to Went to Event' },
+    title: { fa: 'به Went to Event خوش اومدی!', en: 'Welcome to Went to Event' },
     body: {
-      fa: 'هر میزبانی که دنبال کنی، خبرهایش همین‌جا می‌آید. رویدادی رزرو کن تا بلیتت در «بلیت‌ها» ساخته شود.',
+      fa: 'هر میزبانی رو دنبال کنی، خبرهاش همین‌جا میاد. یه رویداد رزرو کن تا بلیتت تو «بلیت‌ها» ساخته بشه.',
       en: 'Updates from the hosts you follow land here. Reserve an event and your ticket appears under Tickets.',
     },
     read: false,

@@ -129,7 +129,7 @@ export function confirmSheet({ title, text, ok, danger = false }) {
 
 /* ──────────────────────────────────────────────────────── identity bits */
 export const verified = (s = 14) => `<span class="vf" title="${T('میزبان تأییدشده', 'Verified host')}">${ico('verified', s)}</span>`;
-export const sampleTag = () => `<span class="tag-sample">${T('نمونه', 'Sample')}</span>`;
+export const sampleTag = () => '';
 
 export function avatar(h, size = 40, cls = '') {
   const st = `width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px`;
@@ -237,8 +237,8 @@ export function area(values, { h = 90 } = {}) {
 }
 
 /* count-up for headline numbers: <b data-count="123456" data-fmt="money|compact|int|pct"> */
-export function countUp(root) {
-  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+export function countUp(root, instant = false) {
+  const reduce = instant || matchMedia('(prefers-reduced-motion:reduce)').matches;
   root.querySelectorAll('[data-count]').forEach((el) => {
     const to = Number(el.dataset.count), f = el.dataset.fmt || 'int';
     const fmt = { money: (v) => nf(v), compact: (v) => compact(v), int: (v) => nf(v), pct: (v) => pct(v) }[f];

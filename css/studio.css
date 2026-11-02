@@ -31,7 +31,7 @@ html[lang=en] .kpi-v{letter-spacing:-.035em}
 .intro-x{position:absolute;top:10px;inset-inline-end:10px}
 .intro-steps{list-style:none;padding:0;display:grid;gap:10px;margin:18px 0 22px}
 .intro-steps li{display:flex;gap:12px;align-items:center;font-size:14px;color:var(--fg-2)}
-.intro-steps li span{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--ember-soft);color:var(--ember-ink);font-weight:700;font-size:12.5px;font-family:'Outfit',sans-serif}
+.intro-steps li span{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--ember-soft);color:var(--ember-ink);font-weight:700;font-size:12.5px;font-family:var(--f-ui)}
 .ov-grid{display:grid;gap:14px;margin-top:14px}
 @media(min-width:900px){.ov-grid{grid-template-columns:1.5fr 1fr}}
 @media(min-width:760px){.ov-grid.b{grid-template-columns:1fr 1fr}.ov-grid.b .feed{grid-column:1/-1}}

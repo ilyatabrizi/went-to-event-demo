@@ -1,20 +1,28 @@
-# Went to Event — platform demo
+# Went to Event
 
-A clickable prototype of **Went to Event**: a platform where event hosts have an account, a public page,
-ticketing, a door list and an audience (customers + engagers) they can message.
+The platform where hosts run their events: a public page, online booking with QR tickets, a door list with a camera
+scanner, discount codes, guest reviews, an audience CRM, broadcasts and payouts — in one panel.
 
-**Jaryan** (Tabriz) is the demo host. Its events, copy and photos come from <https://ilyatabrizi.github.io/jaryan/>.
+**Jaryan** (Tabriz) is the first host on the platform. Its events, copy and photos come from <https://ilyatabrizi.github.io/jaryan/>.
 
-- **Explore** — what an attendee sees: discover, search, event pages, reserve, tickets, inbox.
-- **Studio** — what Jaryan sees: overview, events, door list (check-in / scan / walk-ins), audience CRM, broadcast, page editor.
-- Everything an attendee does (follow, save, reserve) shows up in the Studio immediately — and a broadcast from the Studio lands in the attendee inbox.
+## Two sides
+- **Visitors** (no account needed): discover, search, event pages, reserve with a name and a mobile number (discount codes
+  apply at checkout), QR tickets, follow hosts, leave a review after attending, inbox.
+- **Hosts** sign in at `#/login` and get the panel: overview with a setup checklist, events, door list (camera QR scanner,
+  manual check-in, walk-ins), audience, broadcast, page editor (intro, contacts, sections), discount codes, reviews
+  (reply / hide), money & payouts.
 
-Persian (RTL, Jalali dates) is the default; English via the `FA / EN` button or `?lang=en`.
+Everything a visitor does shows up in the host's panel immediately. Ticket QR codes carry the booking, so a host can admit a
+guest who booked on another phone.
 
-## Notes
-- No build step, no backend: plain ES modules, state in `localStorage` (`Reset demo` lives in *You*).
-- Jaryan's prices, dates and capacities are placeholders. The other three hosts (Pulse Live, Stride Club, Atlas Trips) are **samples**, labelled as such in the UI.
-- Payments are simulated. QR marks are decorative; the printed code is what the scanner accepts.
+Persian (RTL, Jalali dates, everyday conversational Persian) is the default; English via the `EN` button or `?lang=en`.
+Light / dark via the header, or `?theme=light`. `?reset` clears this browser's data.
+
+## Tech
+- No build step: plain ES modules, state in `localStorage`. The account check lives in `js/auth.js` and is the one place to
+  swap for a real backend.
+- Type: IRANYekanX (variable; Persian-digit and Latin-digit files).
+- QR: `qrcode-generator` (MIT) to draw tickets, `jsQR` (Apache-2.0) to read them from the camera, in `js/vendor/`.
 
 ## Run locally
 ```

@@ -7,6 +7,7 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&a
 /* ---------------------------------------------------------------- numbers */
 const locNum = () => (isFa() ? 'fa-IR' : 'en-US');
 export const nf = (n) => new Intl.NumberFormat(locNum()).format(Math.round(n));
+export const nf1 = (n) => new Intl.NumberFormat(locNum(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
 export const money = (n) => (n === 0 ? T('رایگان', 'Free') : `${nf(n)} ${T('تومان', 'toman')}`);
 export function compact(n) {
   const f = (v, d = 1) => new Intl.NumberFormat(locNum(), { maximumFractionDigits: d }).format(v);
@@ -98,21 +99,29 @@ export function bloom(id) {
 }
 
 /* Decorative QR-shaped mark seeded by the booking code. The readable code beside it is the real one. */
-export function qr(code, size = 132) {
-  const N = 25, r = rng('qr:' + code), cell = size / N;
-  let rects = '';
-  const finder = (ox, oy) => {
-    rects += `<rect x="${ox * cell}" y="${oy * cell}" width="${7 * cell}" height="${7 * cell}" rx="${cell * 1.2}" fill="#0E0B10"/>`;
-    rects += `<rect x="${(ox + 1) * cell}" y="${(oy + 1) * cell}" width="${5 * cell}" height="${5 * cell}" rx="${cell * .9}" fill="#fff"/>`;
-    rects += `<rect x="${(ox + 2) * cell}" y="${(oy + 2) * cell}" width="${3 * cell}" height="${3 * cell}" rx="${cell * .6}" fill="#0E0B10"/>`;
-  };
-  finder(0, 0); finder(N - 7, 0); finder(0, N - 7);
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const inF = (x < 8 && y < 8) || (x > N - 9 && y < 8) || (x < 8 && y > N - 9);
-    if (inF) continue;
-    if (r() > 0.52) rects += `<rect x="${x * cell + 0.4}" y="${y * cell + 0.4}" width="${cell - 0.8}" height="${cell - 0.8}" rx="${cell * .28}" fill="#0E0B10"/>`;
-  }
-  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" aria-label="QR">${rects}</svg>`;
+/* A real, scannable QR (qrcode-generator, loaded as a classic script). Falls back to a plain code box. */
+export function qr(text, size = 132) {
+  const Q = window.qrcode;
+  if (!Q) return `<div class="qr-fallback" style="width:${size}px;height:${size}px">${esc(text)}</div>`;
+  const q = Q(0, 'M'); q.addData(String(text)); q.make();
+  const n = q.getModuleCount(), pad = 2, N = n + pad * 2, c = size / N;
+  let d = '';
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) d += `M${((x + pad) * c).toFixed(2)} ${((y + pad) * c).toFixed(2)}h${c.toFixed(2)}v${c.toFixed(2)}h-${c.toFixed(2)}z`;
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" aria-label="QR" shape-rendering="crispEdges"><rect width="${size}" height="${size}" fill="#fff"/><path d="${d}" fill="#0E0B10"/></svg>`;
+}
+
+/* What a ticket QR carries: enough to admit the guest at the door even on another phone. */
+export function ticketPayload(b) {
+  const body = ['WTE1', b.code, b.event, b.qty, encodeURIComponent(b.name || '')].join('|');
+  return body + '|' + (hash(body) % 46655).toString(36);
+}
+export function readTicket(raw) {
+  const s = String(raw || '').trim();
+  if (!s.startsWith('WTE1|')) return /^[A-Z]{2,4}-W?\d{3,4}$/i.test(s) ? { code: s.toUpperCase() } : null;
+  const parts = s.split('|'); if (parts.length !== 6) return null;
+  const body = parts.slice(0, 5).join('|');
+  if ((hash(body) % 46655).toString(36) !== parts[5]) return null;
+  return { code: parts[1], event: parts[2], qty: Number(parts[3]) || 1, name: decodeURIComponent(parts[4] || '') };
 }
 
 /* ------------------------------------------------------------- downloads */

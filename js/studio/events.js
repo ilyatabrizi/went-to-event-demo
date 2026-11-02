@@ -29,10 +29,10 @@ function row(e) {
       <div class="meter"><i style="width:${Math.round(s.fill * 100)}%"></i></div>
     </div>
     <div class="se-act">
-      ${off ? `<button class="btn btn-glass btn-xs" data-act="seRestore" data-id="${e.id}">${T('بازگردانی', 'Restore')}</button>` : `
+      ${off ? `<button class="btn btn-glass btn-xs" data-act="seRestore" data-id="${e.id}">${T('برگردون', 'Restore')}</button>` : `
         ${e.day >= 0 ? `<button class="icon-btn sq" data-act="seEdit" data-id="${e.id}" aria-label="${T('ویرایش', 'Edit')}">${ico('edit', 17)}</button>` : ''}
         <button class="icon-btn sq" data-act="share" data-id="${e.id}" aria-label="${T('اشتراک', 'Share')}">${ico('share', 17)}</button>
-        ${e.day >= 0 ? `<button class="icon-btn sq" data-act="seCancel" data-id="${e.id}" aria-label="${T('لغو', 'Cancel')}">${ico('trash', 17)}</button>` : ''}`}
+        ${e.day >= 0 ? `<button class="icon-btn sq" data-act="seCancel" data-id="${e.id}" aria-label="${T('کنسل', 'Cancel')}">${ico('trash', 17)}</button>` : ''}`}
     </div>
   </article>`;
 }
@@ -43,15 +43,15 @@ export function render() {
   const past = all.filter((e) => e.status !== 'cancelled' && e.day < 0).sort((a, b) => b.day - a.day);
   const off = all.filter((e) => e.status === 'cancelled');
   const items = [{ id: 'up', label: T('پیش رو', 'Upcoming'), n: up.length }, { id: 'past', label: T('برگزارشده', 'Past'), n: past.length }];
-  if (off.length) items.push({ id: 'off', label: T('لغوشده', 'Cancelled'), n: off.length });
+  if (off.length) items.push({ id: 'off', label: T('کنسل‌شده', 'Cancelled'), n: off.length });
   return `
   <div class="wrap st-wrap">
-    ${pageHead(T('رویدادها', 'Events'), T('هرچه جریان برگزار می‌کند، یک‌جا.', 'Everything Jaryan runs, in one place.'),
+    ${pageHead(T('رویدادها', 'Events'), T('همه‌ی رویدادهات، یه جا.', 'Everything Jaryan runs, in one place.'),
       `<button class="btn btn-primary btn-sm" data-act="seNew">${ico('plus', 16)} ${T('رویداد تازه', 'New event')}</button>`)}
     ${tabs('se', items, 'up')}
     <div class="se-panels">
-      ${panel('se', 'up', up.length ? `<div class="se-list">${up.map(row).join('')}</div>` : empty('calendar', T('رویداد پیش‌رویی نداری', 'Nothing upcoming'), T('اولین رویدادت را بساز؛ همان لحظه در صفحهٔ عمومی دیده می‌شود.', 'Create your first event — it shows on your public page right away.'), `<button class="btn btn-primary" data-act="seNew">${ico('plus', 16)} ${T('رویداد تازه', 'New event')}</button>`))}
-      ${panel('se', 'past', past.length ? `<div class="se-list">${past.map(row).join('')}</div>` : empty('clock', T('چیزی برگزار نشده', 'Nothing held yet'), ''))}
+      ${panel('se', 'up', up.length ? `<div class="se-list">${up.map(row).join('')}</div>` : empty('calendar', T('فعلاً رویدادی تو برنامه نداری', 'Nothing upcoming'), T('اولین رویدادتو بساز؛ همون لحظه تو صفحه‌ت نشون داده می‌شه.', 'Create your first event — it shows on your public page right away.'), `<button class="btn btn-primary" data-act="seNew">${ico('plus', 16)} ${T('رویداد تازه', 'New event')}</button>`))}
+      ${panel('se', 'past', past.length ? `<div class="se-list">${past.map(row).join('')}</div>` : empty('clock', T('هنوز چیزی برگزار نشده', 'Nothing held yet'), ''))}
       ${off.length ? panel('se', 'off', `<div class="se-list">${off.map(row).join('')}</div>`) : ''}
     </div>
   </div>`;
@@ -75,7 +75,7 @@ export function openEventEditor(id) {
     full: false, cls: 'editor',
     body: `
       <div class="field"><label for="ev-t">${T('عنوان', 'Title')}</label><input id="ev-t" class="input" value="${esc(isNew ? '' : L(e.title))}" placeholder="${T('مثلاً: ورکشاپ سفالگری', 'e.g. Pottery workshop')}" maxlength="70"></div>
-      <div class="field"><label for="ev-l">${T('توضیح کوتاه', 'Short description')}</label><textarea id="ev-l" class="textarea" maxlength="220" placeholder="${T('یک یا دو جمله که مردم را قانع کند', 'One or two lines that make people want to come')}">${esc(isNew ? '' : L(e.lede))}</textarea></div>
+      <div class="field"><label for="ev-l">${T('توضیح کوتاه', 'Short description')}</label><textarea id="ev-l" class="textarea" maxlength="220" placeholder="${T('یکی دو جمله که آدما رو ترغیب کنه بیان', 'One or two lines that make people want to come')}">${esc(isNew ? '' : L(e.lede))}</textarea></div>
       <div class="field"><label for="ev-c">${T('دسته', 'Category')}</label>
         <select id="ev-c" class="select">${CATEGORIES.map((c) => `<option value="${c.id}" ${e.cat === c.id ? 'selected' : ''}>${esc(L(c))}</option>`).join('')}</select></div>
       <div class="two">
@@ -86,11 +86,11 @@ export function openEventEditor(id) {
         <div class="field"><label for="ev-to">${T('پایان', 'Ends')}</label><input id="ev-to" class="input ltr" type="time" value="${e.to}" style="text-align:start"></div>
         <div class="field"><label for="ev-s">${T('ظرفیت', 'Seats')}</label><input id="ev-s" class="input ltr" inputmode="numeric" value="${e.seats}" style="text-align:start">${st.taken ? `<span class="hint">${T(`${nf(st.taken)} جا رزرو شده`, `${st.taken} already booked`)}</span>` : ''}</div>
       </div>
-      <div class="field"><label for="ev-p">${T('قیمت هر نفر (تومان)', 'Price per person (toman)')}</label><input id="ev-p" class="input ltr" inputmode="numeric" value="${e.price}" style="text-align:start"><span class="hint">${T('۰ یعنی رایگان', '0 means free')}</span></div>
+      <div class="field"><label for="ev-p">${T('قیمت هر نفر (تومان)', 'Price per person (toman)')}</label><input id="ev-p" class="input ltr" inputmode="numeric" value="${e.price}" style="text-align:start"><span class="hint">${T('اگه رایگانه، ۰ بنویس', '0 means free')}</span></div>
       <div class="field" style="margin-bottom:0"><label>${T('پوستر', 'Poster')}</label>
         <div class="ph-rail" id="ev-ph">${[null, ...GALLERY].map(thumb).join('')}</div></div>
       <span class="err-t" id="ev-err" hidden style="display:block;margin-top:12px"></span>`,
-    foot: `<button class="btn btn-primary btn-block" data-save>${isNew ? T('انتشار رویداد', 'Publish event') : T('ذخیره تغییرها', 'Save changes')}</button>`,
+    foot: `<button class="btn btn-primary btn-block" data-save>${isNew ? T('منتشرش کن', 'Publish event') : T('ذخیره‌ی تغییرات', 'Save changes')}</button>`,
   });
 
   s.el.addEventListener('click', (ev) => {
@@ -102,11 +102,11 @@ export function openEventEditor(id) {
     const t = s.$('#ev-t').value.trim(), l = s.$('#ev-l').value.trim();
     const day = s.$('#ev-d').value ? dayFrom(s.$('#ev-d').value) : NaN;
     const seatsN = num(s.$('#ev-s').value), price = num(s.$('#ev-p').value);
-    if (t.length < 2) return err(T('یک عنوان بنویس.', 'Give it a title.'), '#ev-t');
-    if (!isFinite(day) || day < 0) return err(T('تاریخ باید امروز یا بعد از آن باشد.', 'Pick today or a later date.'), '#ev-d');
-    if (!s.$('#ev-from').value || !s.$('#ev-to').value) return err(T('ساعت شروع و پایان را مشخص کن.', 'Set a start and end time.'), '#ev-from');
-    if (seatsN < 1) return err(T('ظرفیت باید حداقل ۱ باشد.', 'Seats must be at least 1.'), '#ev-s');
-    if (seatsN < st.taken) return err(T(`ظرفیت نمی‌تواند کمتر از ${nf(st.taken)} (رزروشده) باشد.`, `Seats can't go below ${st.taken} — already booked.`), '#ev-s');
+    if (t.length < 2) return err(T('یه اسم براش بنویس.', 'Give it a title.'), '#ev-t');
+    if (!isFinite(day) || day < 0) return err(T('تاریخ باید امروز یا بعدش باشه.', 'Pick today or a later date.'), '#ev-d');
+    if (!s.$('#ev-from').value || !s.$('#ev-to').value) return err(T('ساعت شروع و پایان رو مشخص کن.', 'Set a start and end time.'), '#ev-from');
+    if (seatsN < 1) return err(T('ظرفیت حداقل باید ۱ نفر باشه.', 'Seats must be at least 1.'), '#ev-s');
+    if (seatsN < st.taken) return err(T(`ظرفیت نمی‌تونه از ${nf(st.taken)} (تعداد رزروها) کمتر باشه.`, `Seats can't go below ${st.taken} — already booked.`), '#ev-s');
 
     const lang = S().lang, cat = s.$('#ev-c').value;
     const common = { cat, day, from: s.$('#ev-from').value, to: s.$('#ev-to').value, price, seats: seatsN, img, bloom: !img };
@@ -119,7 +119,7 @@ export function openEventEditor(id) {
           title: { fa: t, en: t }, lede: { fa: l, en: l }, body: { fa: body, en: body }, ...common,
         });
       });
-      toast(T('رویداد منتشر شد', 'Event published'), 'check');
+      toast(T('رویدادت منتشر شد 🎉', 'Event published'), 'check');
     } else {
       const patch = { ...common, sub: cat === cur.cat ? cur.sub : null, title: { ...cur.title, [lang]: t }, lede: { ...cur.lede, [lang]: l } };
       commit((x) => {
@@ -127,7 +127,7 @@ export function openEventEditor(id) {
         if (i >= 0) Object.assign(x.studio.created[i], patch);
         else x.studio.edits[id] = { ...(x.studio.edits[id] || {}), ...patch };
       });
-      toast(T('تغییرها ذخیره شد', 'Changes saved'), 'check');
+      toast(T('تغییرات ذخیره شد', 'Changes saved'), 'check');
     }
     s.close();
   });
@@ -140,9 +140,9 @@ on({
     const id = el.dataset.id, e = getEvent(id); if (!e) return;
     const n = S().bookings.filter((b) => b.event === id).length;
     const ok = await confirmSheet({
-      title: T('این رویداد لغو شود؟', 'Cancel this event?'),
-      text: T(`«${L(e.title)}» از صفحهٔ عمومی برداشته می‌شود و پول رزروها برمی‌گردد.${n ? ' به رزروکنندگان پیام می‌رود.' : ''}`, `“${L(e.title)}” comes off your public page and bookings are refunded.${n ? ' Attendees are notified.' : ''}`),
-      ok: T('بله، لغو کن', 'Yes, cancel it'), danger: true,
+      title: T('این رویداد کنسل بشه؟', 'Cancel this event?'),
+      text: T(`«${L(e.title)}» از صفحه‌ت برداشته می‌شه و پول رزروها برمی‌گرده.${n ? ' به همه‌ی رزروکننده‌ها هم پیام می‌ره.' : ''}`, `“${L(e.title)}” comes off your public page and bookings are refunded.${n ? ' Attendees are notified.' : ''}`),
+      ok: T('آره، کنسلش کن', 'Yes, cancel it'), danger: true,
     });
     if (!ok) return;
     commit((s) => {
@@ -151,7 +151,7 @@ on({
       s.bookings = s.bookings.filter((b) => b.event !== id);
       if (had) s.inbox.unshift({ id: uid('n'), ts: Date.now(), kind: 'host', host: ME, title: { fa: 'رویداد لغو شد', en: 'Event cancelled' }, body: { fa: `«${e.title.fa || L(e.title)}» لغو شد. مبلغ رزروت کامل برمی‌گردد.`, en: `“${e.title.en || L(e.title)}” was cancelled. Your reservation is refunded in full.` }, read: false });
     });
-    toast(T('رویداد لغو شد', 'Event cancelled'), 'trash');
+    toast(T('رویداد کنسل شد', 'Event cancelled'), 'trash');
   },
-  seRestore(el) { const id = el.dataset.id; commit((s) => { s.studio.cancelled = s.studio.cancelled.filter((x) => x !== id); }); toast(T('رویداد بازگردانده شد', 'Event restored'), 'refresh'); },
+  seRestore(el) { const id = el.dataset.id; commit((s) => { s.studio.cancelled = s.studio.cancelled.filter((x) => x !== id); }); toast(T('رویداد برگشت', 'Event restored'), 'refresh'); },
 });

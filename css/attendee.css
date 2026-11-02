@@ -317,5 +317,5 @@ bdi.latin{white-space:nowrap}
   .sys-shapes{grid-template-columns:repeat(3,1fr)}
 }
 @media (prefers-reduced-motion:reduce){.sys-track i{transition-duration:.01s}}
-.sys-brand .micro,.sys-pal-h .micro,.sys-m-h .micro{direction:ltr;unicode-bidi:isolate;font-family:var(--f-mono);font-variant-numeric:normal}
+.sys-brand .micro,.sys-pal-h .micro,.sys-m-h .micro{direction:ltr;unicode-bidi:isolate;font-family:var(--f-lat);font-variant-numeric:normal}
 :root[data-theme=light] .mini-ticket,:root[data-theme=light] .tk-big{box-shadow:0 0 0 1px rgb(var(--fg-rgb) / .09),var(--shadow-2)}

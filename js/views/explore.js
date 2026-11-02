@@ -24,8 +24,8 @@ function eventResults() {
   });
   if (!list.length) {
     return empty('search', T('چیزی پیدا نشد', 'Nothing found'), prefs.cat === 'following'
-      ? T('هنوز میزبانی را دنبال نکرده‌ای. از تب «میزبان‌ها» شروع کن.', "You're not following any host yet. Start from the Hosts tab.")
-      : T('عبارت دیگری امتحان کن یا فیلتر را بردار.', 'Try another word or clear the filter.'));
+      ? T('هنوز کسی رو دنبال نکردی. از بخش «میزبان‌ها» شروع کن.', "You're not following any host yet. Start from the Hosts tab.")
+      : T('یه کلمه‌ی دیگه امتحان کن یا فیلتر رو بردار.', 'Try another word or clear the filter.'));
   }
   const groups = new Map();
   list.forEach((e) => { if (!groups.has(e.day)) groups.set(e.day, []); groups.get(e.day).push(e); });
@@ -37,7 +37,7 @@ function eventResults() {
 function hostResults() {
   const q = norm(prefs.q.trim());
   const list = hosts().filter((h) => !q || norm([h.name.fa, h.name.en, h.tagline.fa, h.tagline.en, h.handle].join(' ')).includes(q));
-  if (!list.length) return empty('users', T('میزبانی پیدا نشد', 'No hosts found'), T('عبارت دیگری امتحان کن.', 'Try another word.'));
+  if (!list.length) return empty('users', T('میزبانی پیدا نشد', 'No hosts found'), T('یه کلمه‌ی دیگه امتحان کن.', 'Try another word.'));
   return `<div class="list-stack cols">${list.map((h) => `
     <article class="host-row">
       ${avatar(h, 56)}

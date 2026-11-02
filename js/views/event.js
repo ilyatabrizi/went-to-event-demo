@@ -20,7 +20,7 @@ const list = (items) => `<ul class="tick-list">${items.map((x) => `<li>${ico('ch
 export function render(id) {
   const e = getEvent(id);
   if (!e) {
-    return `<div class="wrap">${empty('info', T('رویداد پیدا نشد', 'Event not found'), T('ممکن است لغو یا حذف شده باشد.', 'It may have been cancelled or removed.'), `<a class="btn btn-primary" href="#/">${T('بازگشت به کشف', 'Back to Discover')}</a>`)}</div>`;
+    return `<div class="wrap">${empty('info', T('این رویداد پیدا نشد', 'Event not found'), T('شاید کنسل یا پاک شده باشه.', 'It may have been cancelled or removed.'), `<a class="btn btn-primary" href="#/">${T('برگرد به صفحه‌ی اول', 'Back to Discover')}</a>`)}</div>`;
   }
   const h = getHost(e.host), s = seats(e), d = dateOf(e.day);
   const body = LL(e.body), learn = LL(e.learn), inc = LL(e.includes);
@@ -41,7 +41,7 @@ export function render(id) {
       </div>
 
       <div class="ev-main">
-        ${cancelled ? `<div class="banner warn">${ico('info', 18)}<span>${T('این رویداد لغو شده است.', 'This event has been cancelled.')}</span></div>` : ''}
+        ${cancelled ? `<div class="banner warn">${ico('info', 18)}<span>${T('این رویداد کنسل شده.', 'This event has been cancelled.')}</span></div>` : ''}
         <div class="micro ev-kicker">${esc(catName(e))}${e.day === 0 ? ` · <span class="ember">${T('امروز', 'Today')}</span>` : ''}</div>
         <h1 class="h1 ev-h">${esc(L(e.title))}</h1>
         <p class="lede ev-lede">${esc(L(e.lede))}</p>
@@ -60,32 +60,30 @@ export function render(id) {
           ${fact('spark', T('سطح', 'Level'), esc(L(e.level) || T('برای همه', 'For everyone')))}
         </div>
 
-        ${body.length ? `<section class="ev-sec"><h2 class="h2">${T('دربارهٔ این رویداد', 'About this event')}</h2>${body.map((p) => `<p class="body-p">${esc(p)}</p>`).join('')}</section>` : ''}
+        ${body.length ? `<section class="ev-sec"><h2 class="h2">${T('درباره‌ی این رویداد', 'About this event')}</h2>${body.map((p) => `<p class="body-p">${esc(p)}</p>`).join('')}</section>` : ''}
 
-        ${learn.length ? `<section class="ev-sec"><h2 class="h2">${T('چه چیزی می‌بینی', "What you'll do")}</h2>${list(learn)}</section>` : ''}
-        ${inc.length ? `<section class="ev-sec"><h2 class="h2">${T('همراه با بلیت', "What's included")}</h2>${list(inc)}</section>` : ''}
+        ${learn.length ? `<section class="ev-sec"><h2 class="h2">${T('اونجا چی کار می‌کنیم', "What you'll do")}</h2>${list(learn)}</section>` : ''}
+        ${inc.length ? `<section class="ev-sec"><h2 class="h2">${T('تو بلیتت هست', "What's included")}</h2>${list(inc)}</section>` : ''}
 
         ${e.day >= 0 && !cancelled ? `
         <section class="ev-sec">
           <div class="seat-card">
             <div class="grow">
               <div class="micro">${T('ظرفیت', 'Capacity')}</div>
-              <div class="h3" style="margin-top:3px">${s.full ? T('ظرفیت تکمیل شد', 'Sold out') : T(`${nf(s.left)} جای خالی از ${nf(s.total)}`, `${s.left} of ${s.total} spots left`)}</div>
+              <div class="h3" style="margin-top:3px">${s.full ? T('ظرفیت پر شد', 'Sold out') : T(`${nf(s.left)} جا از ${nf(s.total)} جا مونده`, `${s.left} of ${s.total} spots left`)}</div>
               <div class="meter wide"><i style="width:${Math.round(s.fill * 100)}%"></i></div>
             </div>
           </div>
         </section>` : ''}
 
-        ${gal.length ? `<section class="ev-sec"><h2 class="h2">${T('از همین‌جا', 'From the space')}</h2>
+        ${gal.length ? `<section class="ev-sec"><h2 class="h2">${T('عکس‌های اینجا', 'From the space')}</h2>
           <div class="rail mini-gal" style="--gut:0px">${gal.map((k) => `<button class="g-th" data-act="photo" data-src="${jimg(k, 960)}"><img src="${jimg(k, 480)}" alt="" loading="lazy"></button>`).join('')}</div></section>` : ''}
 
         ${e.host === ME ? `<section class="ev-sec"><h2 class="h2">${T('پرسش‌های پرتکرار', 'Good to know')}</h2>
           <div>${FAQ.map((f) => `<details class="faq"><summary><span>${esc(L(f.q))}</span><span class="pm">${ico('plus', 15)}</span></summary><p>${esc(L(f.a))}</p></details>`).join('')}</div></section>` : ''}
 
-        ${more.length ? `${sectionHead(T(`بیشتر از ${L(h.name)}`, `More from ${L(h.name)}`), `<a class="link-more" href="#/h/${h.id}">${T('صفحهٔ میزبان', 'Host page')}${ico('chev', 16)}</a>`)}
+        ${more.length ? `${sectionHead(T(`بقیه‌ی برنامه‌های ${L(h.name)}`, `More from ${L(h.name)}`), `<a class="link-more" href="#/h/${h.id}">${T('صفحه‌ی میزبان', 'Host page')}${ico('chev', 16)}</a>`)}
           <div class="rail" style="--gut:0px">${more.map(evTile).join('')}</div>` : ''}
-
-        ${h.sample ? `<p class="foot-note micro" style="margin-top:34px">${T('این میزبان و رویدادش نمونه‌اند و فقط برای نمایش پلتفرم اینجا هستند.', 'This host and event are samples, here only to show the platform.')}</p>` : ''}
       </div>
     </div>
   </div>`;
@@ -99,23 +97,23 @@ export function dock(id) {
   const saved = S().saved.includes(e.id);
   let buy;
   if (e.status === 'cancelled') {
-    buy = `<div class="dk-price"><b>${T('لغو شد', 'Cancelled')}</b></div><a class="btn btn-glass" href="#/h/${e.host}">${T('رویدادهای دیگر', 'Other events')}</a>`;
+    buy = `<div class="dk-price"><b>${T('کنسل شد', 'Cancelled')}</b></div><a class="btn btn-glass" href="#/h/${e.host}">${T('رویدادهای دیگر', 'Other events')}</a>`;
   } else if (e.day < 0) {
     buy = `<div class="dk-price"><b>${T('برگزار شد', 'Held')}</b><span class="micro">${esc(relDay(e.day))}</span></div><a class="btn btn-glass" href="#/h/${e.host}">${T('برنامه‌های بعدی', 'Upcoming events')}</a>`;
   } else if (mine.length) {
     const n = mine.reduce((a, b) => a + b.qty, 0);
-    buy = `<div class="dk-price"><b>${T('جایت رزرو است', "You're in")}</b><span class="micro">${T(`${nf(n)} نفر`, `${n} guest${n > 1 ? 's' : ''}`)}</span></div>
+    buy = `<div class="dk-price"><b>${T('جات رزرو شده', "You're in")}</b><span class="micro">${T(`${nf(n)} نفر`, `${n} guest${n > 1 ? 's' : ''}`)}</span></div>
       <button class="btn btn-bone" data-act="ticket" data-id="${mine[0].id}">${ico('ticket', 18)} ${T('دیدن بلیت', 'View ticket')}</button>`;
   } else if (s.full) {
-    buy = `<div class="dk-price"><b>${T('ظرفیت پر است', 'Sold out')}</b><span class="micro">${T('به میزبان خبر بده', 'Follow to hear first')}</span></div>
+    buy = `<div class="dk-price"><b>${T('ظرفیت پر شده', 'Sold out')}</b><span class="micro">${T('اگه جا خالی شد خبرم کن', 'Follow to hear first')}</span></div>
       <button class="btn btn-glass" disabled>${T('تکمیل', 'Sold out')}</button>`;
   } else {
     buy = `<div class="dk-price"><b>${money(e.price)}</b><span class="micro">${s.left <= 5 ? `<span class="ember">${T(`${nf(s.left)} جای خالی`, `${s.left} left`)}</span>` : T('برای هر نفر', 'per person')}</span></div>
-      <button class="btn btn-primary" data-act="book" data-id="${e.id}">${T('رزرو جا', 'Reserve')} ${ico('arrow', 18)}</button>`;
+      <button class="btn btn-primary" data-act="book" data-id="${e.id}">${T('رزرو کن', 'Reserve')} ${ico('arrow', 18)}</button>`;
   }
   return `
   <div class="dk-top">
-    <button class="icon-btn glass dk-btn" data-act="back" aria-label="${T('بازگشت', 'Back')}">${ico('back', 20)}</button>
+    <button class="icon-btn glass dk-btn" data-act="back" aria-label="${T('برگشت', 'Back')}">${ico('back', 20)}</button>
     <div class="dk-top-r">
       <button class="icon-btn glass dk-btn" data-act="share" data-id="${e.id}" aria-label="${T('اشتراک', 'Share')}">${ico('share', 19)}</button>
       <button class="icon-btn glass dk-btn dk-save ${saved ? 'on' : ''}" data-act="save" data-id="${e.id}" aria-pressed="${saved}" aria-label="${T('ذخیره', 'Save')}">${ico('bookmark', 19)}</button>

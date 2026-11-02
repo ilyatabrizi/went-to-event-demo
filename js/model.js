@@ -1,8 +1,8 @@
 /* The derived model: static seeds + whatever the person has done in the app.
    Everything the studio shows (revenue, door list, CRM, activity) is computed here
-   from the same bookings the attendee side writes — that is the point of the demo. */
+   from the same bookings the visitor side writes, so a reservation shows up in the panel the moment it happens. */
 import { S } from './store.js';
-import { EVENTS, HOSTS, CONTACTS, DOOR, ME, SEED_TAGS, SEED_NOTES } from './data.js';
+import { EVENTS, HOSTS, CONTACTS, DOOR, ME, SEED_TAGS, SEED_NOTES, REVIEWS, SEED_CODES } from './data.js';
 import { L, T } from './i18n.js';
 import { rng, hash, DAY, sum } from './util.js';
 
@@ -46,7 +46,7 @@ const ATT = (() => {
 })();
 
 /* ─────────────────────────────────────────────────────────────── identity */
-export const userName = () => S().user.name || T('دارا ک.', 'Dara K.');
+export const userName = () => S().user.name || T('مهمون', 'Guest');
 export const initials = (name) => {
   const s = String(L(name) || '').trim();
   return s ? Array.from(s)[0].toUpperCase() : '·';
@@ -96,9 +96,9 @@ export function guests(eventId) {
   const e = getEvent(eventId);
   if (!e) return [];
   const st = S().studio;
-  const seeded = (ATT[eventId] || []).map((a) => ({ key: a.code, c: a.c, qty: a.qty, paid: a.paid, code: a.code, ts: a.ts, kind: 'seed' }));
-  const mine = S().bookings.filter((b) => b.event === eventId).map((b) => ({ key: b.code, c: 'me', qty: b.qty, paid: true, code: b.code, ts: b.at, kind: 'live', bid: b.id }));
-  const walks = st.walkins.filter((w) => w.event === eventId).map((w) => ({ key: w.code, c: w.cid, qty: w.qty, paid: true, code: w.code, ts: w.at, kind: 'walk', wid: w.id }));
+  const seeded = (ATT[eventId] || []).map((a) => ({ key: a.code, c: a.c, qty: a.qty, paid: a.paid, code: a.code, ts: a.ts, kind: 'seed', amount: e.price * a.qty }));
+  const mine = S().bookings.filter((b) => b.event === eventId).map((b) => ({ key: b.code, c: 'me', qty: b.qty, paid: true, code: b.code, ts: b.at, kind: 'live', bid: b.id, amount: b.total ?? e.price * b.qty, promo: b.promo || null }));
+  const walks = st.walkins.filter((w) => w.event === eventId).map((w) => ({ key: w.code, c: w.cid, qty: w.qty, paid: true, code: w.code, ts: w.at, kind: 'walk', wid: w.id, amount: e.price * w.qty }));
   const checked = st.checkins[eventId] || {};
   return [...seeded, ...mine, ...walks].map((g) => ({ ...g, in: !!checked[g.key] }));
 }
@@ -108,9 +108,9 @@ export function rawContacts() {
   const st = S().studio;
   const list = CONTACTS.map((c) => ({ ...c }));
   st.walkins.forEach((w) => {
-    if (!list.find((c) => c.id === w.cid)) list.push({ id: w.cid, name: { fa: w.name, en: w.name }, phone: w.phone || '', src: 'walk', eng: false, joined: 0, follows: false, saves: 0, walkin: true });
+    if (!list.find((c) => c.id === w.cid)) list.push({ id: w.cid, name: { fa: w.name, en: w.name }, phone: w.phone || '', src: w.online ? 'went' : 'walk', eng: false, joined: 0, follows: false, saves: 0, walkin: !w.online });
   });
-  /* the person using the demo shows up in Jaryan's CRM the moment they follow, save or book */
+  /* this visitor shows up in Jaryan's audience the moment they follow, save or book */
   const bookedJaryan = S().bookings.some((b) => getEvent(b.event)?.host === ME);
   const savedJaryan = S().saved.filter((id) => getEvent(id)?.host === ME).length;
   const f = following(ME);
@@ -133,7 +133,7 @@ export function audience() {
   const next = nextEvent();
   return rawContacts().map((c) => {
     const bookings = (byC.get(c.id) || []).sort((a, b) => b.day - a.day);
-    const spent = sum(bookings.filter((b) => b.paid), (b) => b.price * b.qty);
+    const spent = sum(bookings.filter((b) => b.paid), (b) => b.amount ?? b.price * b.qty);
     const pastB = bookings.filter((b) => b.day < 0);
     const hasUpcoming = bookings.some((b) => b.day >= 0);
     const lastDay = pastB.length ? pastB[0].day : null;
@@ -156,8 +156,8 @@ export const SEGMENTS = [
   { id: 'customers', fa: 'مشتری‌ها',          en: 'Customers',     test: (c) => c.isCustomer },
   { id: 'engagers',  fa: 'دنبال‌کننده‌ها',    en: 'Engagers',      test: (c) => !c.isCustomer },
   { id: 'vip',       fa: 'ویژه',             en: 'VIP',           test: (c) => c.vip },
-  { id: 'next',      fa: 'حاضران رویداد بعد',  en: 'Next event',    test: (c) => c.next },
-  { id: 'lapsed',    fa: 'در خطر ریزش',       en: 'Lapsed',        test: (c) => c.lapsed },
+  { id: 'next',      fa: 'مهمون‌های رویداد بعدی', en: 'Next event',  test: (c) => c.next },
+  { id: 'lapsed',    fa: 'یه مدتیه نیومدن',   en: 'Lapsed',        test: (c) => c.lapsed },
 ];
 export const segment = (id) => audience().filter((SEGMENTS.find((s) => s.id === id) || SEGMENTS[0]).test);
 
@@ -165,7 +165,7 @@ export const segment = (id) => audience().filter((SEGMENTS.find((s) => s.id === 
 export function revenue() {
   const evs = eventsOf(ME).filter((e) => e.status !== 'cancelled');
   let paid = 0, pending = 0;
-  for (const e of evs) for (const g of guests(e.id)) { (g.paid ? (paid += e.price * g.qty) : (pending += e.price * g.qty)); }
+  for (const e of evs) for (const g of guests(e.id)) { (g.paid ? (paid += g.amount) : (pending += g.amount)); }
   return { paid, pending };
 }
 export function revenueSeries(days = 14) {
@@ -174,7 +174,7 @@ export function revenueSeries(days = 14) {
     for (const g of guests(e.id)) {
       if (!g.paid) continue;
       const ago = Math.floor((Date.now() - g.ts) / DAY);
-      if (ago >= 0 && ago < days) arr[days - 1 - ago] += e.price * g.qty;
+      if (ago >= 0 && ago < days) arr[days - 1 - ago] += g.amount;
     }
   }
   return arr;
@@ -213,3 +213,79 @@ export const unread = () => S().inbox.filter((n) => !n.read).length;
 export const ticketsFor = () => S().bookings.map((b) => ({ ...b, ev: getEvent(b.event) })).filter((b) => b.ev);
 export const myUpcoming = () => ticketsFor().filter((b) => b.ev.day >= 0).sort((a, b) => a.ev.day - b.ev.day);
 export const myPast = () => ticketsFor().filter((b) => b.ev.day < 0);
+
+/* ─────────────────────────────────────────────────────────── discount codes */
+export function codes() {
+  const base = S().studio.codes ?? SEED_CODES.map((c) => ({ ...c, expires: NOW0 + c.days * DAY }));
+  const usedLive = {};
+  S().bookings.forEach((b) => { if (b.promo) usedLive[b.promo] = (usedLive[b.promo] || 0) + 1; });
+  return base.map((c) => {
+    const used = (c.used || 0) + (usedLive[c.code] || 0);
+    const expired = c.expires && c.expires < Date.now();
+    const full = c.limit && used >= c.limit;
+    return { ...c, used, expired, full, state: !c.active ? 'off' : expired ? 'expired' : full ? 'full' : 'on' };
+  });
+}
+/* the price after a code, or a reason it doesn't apply */
+export function applyCode(raw, e, qty) {
+  const code = String(raw || '').trim().toUpperCase();
+  if (!code) return { ok: false, why: 'empty' };
+  if (e.host !== ME) return { ok: false, why: 'nope' };
+  const c = codes().find((x) => x.code === code);
+  if (!c) return { ok: false, why: 'nope' };
+  if (c.state === 'expired') return { ok: false, why: 'expired' };
+  if (c.state === 'full') return { ok: false, why: 'full' };
+  if (c.state !== 'on') return { ok: false, why: 'nope' };
+  if (c.event && c.event !== e.id) return { ok: false, why: 'event' };
+  const gross = e.price * qty;
+  const off = Math.min(gross, c.type === 'pct' ? Math.round((gross * c.value) / 100 / 1000) * 1000 : c.value * qty);
+  return { ok: true, code: c.code, off, total: gross - off, c };
+}
+
+/* ─────────────────────────────────────────────────────────────── reviews */
+export function reviewsOf(host, { all = false } = {}) {
+  const st = S();
+  const byId = new Map(CONTACTS.map((c) => [c.id, c]));
+  const seeded = REVIEWS.filter((r) => r.host === host).map((r) => ({
+    ...r, name: L(byId.get(r.c)?.name) || '', ts: NOW0 - r.ago * DAY - (hash(r.id) % 9) * 3600e3, mine: false,
+  }));
+  const mine = st.reviews.filter((r) => r.host === host).map((r) => ({ ...r, text: { fa: r.text, en: r.text }, mine: true }));
+  return [...mine, ...seeded]
+    .map((r) => ({ ...r, reply: st.studio.replies[r.id] || '', hidden: st.studio.hiddenReviews.includes(r.id) }))
+    .filter((r) => all || !r.hidden)
+    .sort((a, b) => b.ts - a.ts);
+}
+export function rating(host) {
+  const list = reviewsOf(host);
+  if (!list.length) return { avg: 0, n: 0, dist: [0, 0, 0, 0, 0] };
+  const dist = [0, 0, 0, 0, 0];
+  list.forEach((r) => { dist[r.stars - 1]++; });
+  return { avg: sum(list, (r) => r.stars) / list.length, n: list.length, dist };
+}
+/* events this visitor attended with a host and hasn't reviewed yet */
+export function canReview(host) {
+  const done = new Set(S().reviews.map((r) => r.event));
+  return ticketsFor().filter((b) => b.ev.host === host && b.ev.day < 0 && !done.has(b.ev.id));
+}
+
+/* ──────────────────────────────────────────────────────────────── money */
+export function finances() {
+  const evs = eventsOf(ME).filter((e) => e.status !== 'cancelled');
+  let held = 0, upcomingPaid = 0, unpaid = 0;
+  const rows = [];
+  for (const e of evs) {
+    let p = 0, u = 0, promo = 0;
+    for (const g of guests(e.id)) { if (g.paid) p += g.amount; else u += g.amount; if (g.promo) promo += e.price * g.qty - g.amount; }
+    if (e.day < 0) held += p; else upcomingPaid += p;
+    unpaid += u;
+    if (p || u) rows.push({ e, paid: p, unpaid: u, promo });
+  }
+  /* two settlements already paid out, as a share of what past events earned */
+  const seed = [
+    { id: 'p-s1', amount: Math.round((held * 0.46) / 100000) * 100000, ts: NOW0 - 12 * DAY, status: 'done', ref: 'STL-48210' },
+    { id: 'p-s2', amount: Math.round((held * 0.31) / 100000) * 100000, ts: NOW0 - 27 * DAY, status: 'done', ref: 'STL-47735' },
+  ];
+  const payouts = [...S().studio.payouts, ...seed].sort((a, b) => b.ts - a.ts);
+  const settled = sum(payouts, (p) => p.amount);
+  return { available: Math.max(0, held - settled), upcoming: upcomingPaid, unpaid, held, settled, payouts, rows: rows.sort((a, b) => b.e.day - a.e.day) };
+}

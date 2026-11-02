@@ -41,6 +41,8 @@ const P = {
   verified: '<path d="M12 2.8l2.3 1.7 2.8-.1 1 2.7 2.3 1.7-.9 2.7.9 2.7-2.3 1.7-1 2.7-2.8-.1L12 21.2l-2.3-1.7-2.8.1-1-2.7-2.3-1.7.9-2.7-.9-2.7 2.3-1.7 1-2.7 2.8.1z" fill="currentColor" stroke="none"/><path d="M8.6 12.2l2.4 2.4 4.4-4.8" stroke="#0E0B10" stroke-width="1.9"/>',
   trend: '<path d="M4 16l5-5 3.5 3.5L20 7"/><path d="M14.5 7H20v5.5"/>',
   wallet: '<path d="M4 8a3 3 0 0 1 3-3h10v3"/><rect x="4" y="8" width="16" height="11.5" rx="3"/><circle cx="16" cy="13.8" r="1.1" fill="currentColor"/>',
+  phone: '<path d="M6.8 3.6h2.5l1.4 4-1.9 1.3a11.2 11.2 0 0 0 6.3 6.3l1.3-1.9 4 1.4v2.5a2 2 0 0 1-2.2 2A16.6 16.6 0 0 1 4.8 5.8a2 2 0 0 1 2-2.2z"/>',
+  route: '<circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8.2 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.8"/>',
   tag: '<path d="M4.5 12.2V5.5a1 1 0 0 1 1-1h6.7l7.3 7.3a1.4 1.4 0 0 1 0 2l-5.7 5.7a1.4 1.4 0 0 1-2 0z"/><circle cx="8.8" cy="8.8" r="1.1" fill="currentColor"/>',
   lock: '<rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
   refresh: '<path d="M20 11a8 8 0 0 0-14-4L4 9.5M4 5v4.5h4.5M4 13a8 8 0 0 0 14 4l2-2.5M20 19v-4.5h-4.5"/>',

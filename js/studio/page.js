@@ -18,12 +18,14 @@ function preview() {
   const pg = S().studio.page, h = getHost(ME);
   const ups = eventsOf(ME).filter((e) => isLive(e) && e.day >= 0).sort(byTime);
   const pin = ups.find((e) => e.id === pg.pinned);
-  const tabs = [T('رویدادها', 'Events'), pg.showAbout ? T('درباره', 'About') : '', pg.showGallery ? T('گالری', 'Gallery') : '', pg.showFaq ? T('پرسش‌ها', 'FAQ') : ''].filter(Boolean);
+  const tabs = [T('رویدادها', 'Events'), pg.showReviews ? T('نظرات', 'Reviews') : '', pg.showAbout ? T('درباره', 'About') : '', pg.showGallery ? T('گالری', 'Gallery') : '', pg.showFaq ? T('پرسش‌ها', 'FAQ') : ''].filter(Boolean);
+  const contacts = [pg.phone && ['phone', T('تماس', 'Call')], pg.telegram && ['send', T('تلگرام', 'Telegram')], pg.instagram && ['ig', 'Instagram']].filter(Boolean);
   return `
     <div class="pv-cover"><img src="${h.cover}" alt=""><div class="pv-fade"></div></div>
     <div class="pv-body">
       <div class="pv-id">${avatar(h, 54)}<div><div class="h3">${esc(L(h.name))} ${verified(15)}</div><div class="micro latin">@${esc(h.handle)}</div></div></div>
       <p class="small pv-tag" id="pv-tag">${esc(L(h.tagline))}</p>
+      ${contacts.length ? `<div class="pv-contacts">${contacts.map(([i, t]) => `<span>${ico(i, 13)} ${t}</span>`).join('')}</div>` : ''}
       <div id="pv-pin">${pinHtml(pin)}</div>
       <div class="pv-tabs" id="pv-tabs">${tabs.map((t, i) => `<span class="${i === 0 ? 'on' : ''}">${esc(t)}</span>`).join('')}</div>
       <div class="pv-about" id="pv-about" ${pg.showAbout ? '' : 'hidden'}>${esc(paras()[0] || '')}</div>
@@ -38,17 +40,17 @@ export function render() {
   const ups = eventsOf(ME).filter((e) => isLive(e) && e.day >= 0).sort(byTime);
   return `
   <div class="wrap st-wrap">
-    ${pageHead(T('صفحهٔ جریان', 'Your page'), T('این چیزی است که مردم در <bdi class="latin">Went to Event</bdi> می‌بینند. تغییرها همان لحظه ذخیره می‌شوند.', 'This is what people see on Went to Event. Changes save as you type.'),
-      `<a class="btn btn-bone btn-sm" href="#/h/jaryan">${ico('eye', 16)} ${T('دیدن صفحهٔ عمومی', 'View public page')}</a>`)}
+    ${pageHead(T('صفحه‌ی جریان', 'Your page'), T('این همون چیزیه که مردم می‌بینن. هر چی عوض کنی همون لحظه ذخیره می‌شه.', 'This is what people see on Went to Event. Changes save as you type.'),
+      `<a class="btn btn-bone btn-sm" href="#/h/jaryan">${ico('eye', 16)} ${T('دیدن صفحه‌م', 'View public page')}</a>`)}
     <div class="pg-grid">
       <div class="pg-form">
         <section class="card">
           <div class="field"><label for="pg-tag">${T('شعار', 'Tagline')}</label>
-            <input id="pg-tag" class="input" data-in="pgTag" maxlength="${MAXT}" value="${esc(L(h.tagline))}" placeholder="${T('یک خط دربارهٔ جریان', 'One line about Jaryan')}">
-            <span class="hint">${T('در هر دو زبان نمایش داده می‌شود.', 'Shown in both languages.')}</span></div>
-          <div class="field" style="margin-bottom:0"><label for="pg-about">${T('دربارهٔ ما', 'About')}</label>
+            <input id="pg-tag" class="input" data-in="pgTag" maxlength="${MAXT}" value="${esc(L(h.tagline))}" placeholder="${T('یه خط درباره‌ی جریان', 'One line about Jaryan')}">
+            <span class="hint">${T('تو هر دو زبان نشون داده می‌شه.', 'Shown in both languages.')}</span></div>
+          <div class="field" style="margin-bottom:0"><label for="pg-about">${T('درباره‌ی ما', 'About')}</label>
             <textarea id="pg-about" class="textarea tall" data-in="pgAbout" maxlength="${MAXA}">${esc(aboutText())}</textarea>
-            <span class="hint">${T('بین پاراگراف‌ها یک خط خالی بگذار.', 'Leave a blank line between paragraphs.')}</span></div>
+            <span class="hint">${T('بین پاراگراف‌ها یه خط خالی بذار.', 'Leave a blank line between paragraphs.')}</span></div>
         </section>
 
         <section class="card">
@@ -57,15 +59,28 @@ export function render() {
               <option value="">${T('بدون سنجاق', 'None')}</option>
               ${ups.map((e) => `<option value="${e.id}" ${pg.pinned === e.id ? 'selected' : ''}>${esc(L(e.title))}</option>`).join('')}
             </select>
-            <span class="hint">${T('بالای فهرست رویدادهای صفحه می‌نشیند.', 'Sits at the top of your events list.')}</span></div>
+            <span class="hint">${T('بالای لیست رویدادهای صفحه‌ت می‌شینه.', 'Sits at the top of your events list.')}</span></div>
+        </section>
+
+        <section class="card">
+          <div class="card-h"><b>${T('راه‌های تماس', 'Ways to reach you')}</b><span class="small muted">${T('دکمه‌هاش بالای صفحه‌ت نشون داده می‌شه', 'Shown as buttons at the top of your page')}</span></div>
+          <div class="field-row">
+            <div class="field"><label for="pg-phone">${T('شماره تماس', 'Phone')}</label><input id="pg-phone" class="input ltr" inputmode="tel" data-in="pgField" data-k="phone" value="${esc(pg.phone || '')}" placeholder="0914 000 0000" style="text-align:start"></div>
+            <div class="field"><label for="pg-tg">${T('تلگرام', 'Telegram')}</label><input id="pg-tg" class="input ltr" data-in="pgField" data-k="telegram" value="${esc(pg.telegram || '')}" placeholder="@username" style="text-align:start"></div>
+          </div>
+          <div class="field-row">
+            <div class="field" style="margin-bottom:0"><label for="pg-ig">${T('اینستاگرام', 'Instagram')}</label><input id="pg-ig" class="input ltr" data-in="pgField" data-k="instagram" value="${esc(pg.instagram || '')}" placeholder="@username" style="text-align:start"></div>
+            <div class="field" style="margin-bottom:0"><label for="pg-web">${T('سایت', 'Website')}</label><input id="pg-web" class="input ltr" data-in="pgField" data-k="website" value="${esc(pg.website || '')}" placeholder="https://" style="text-align:start"></div>
+          </div>
         </section>
 
         <section class="card sw-card">
           ${switchRow('pgToggle', 'showAbout', pg.showAbout, T('بخش «درباره»', 'About section'))}
           ${switchRow('pgToggle', 'showGallery', pg.showGallery, T('گالری عکس', 'Photo gallery'))}
           ${switchRow('pgToggle', 'showFaq', pg.showFaq, T('پرسش‌های پرتکرار', 'FAQ'))}
+          ${switchRow('pgToggle', 'showReviews', pg.showReviews, T('نظرات مهمون‌ها', 'Guest reviews'), T('میانگین امتیاز هم کنار اسمت میاد', 'Your average rating shows next to your name'))}
         </section>
-        <button class="btn btn-ghost btn-sm" data-act="pgReset">${ico('refresh', 15)} ${T('بازگشت به متن پیش‌فرض', 'Restore default text')}</button>
+        <button class="btn btn-ghost btn-sm" data-act="pgReset">${ico('refresh', 15)} ${T('برگردون به متن اولیه', 'Restore default text')}</button>
       </div>
 
       <aside class="pg-side"><div class="micro" style="margin-bottom:10px">${T('پیش‌نمایش', 'Live preview')}</div><div class="pv glass" id="pv">${preview()}</div></aside>
@@ -73,10 +88,17 @@ export function render() {
   </div>`;
 }
 
+let pvT = 0;
 const repaintPv = () => { const p = document.getElementById('pv'); if (p) p.innerHTML = preview(); };
 onInput({
   pgTag(el) { const v = el.value.trim(); commit((s) => { s.studio.page.tagline = v || null; }, { silent: true }); const t = document.getElementById('pv-tag'); if (t) t.textContent = L(getHost(ME).tagline); },
   pgAbout(el) { commit((s) => { s.studio.page.about = el.value; }, { silent: true }); const a = document.getElementById('pv-about'); if (a) a.textContent = paras()[0] || ''; },
+  pgField(el) {
+    const k = el.dataset.k; let v = el.value.trim();
+    if (k === 'telegram' || k === 'instagram') v = v.replace(/^@+/, '');
+    commit((s) => { s.studio.page[k] = v; }, { silent: true });
+    clearTimeout(pvT); pvT = setTimeout(repaintPv, 250);
+  },
   pgPin(el) { commit((s) => { s.studio.page.pinned = el.value || null; }, { silent: true }); const p = document.getElementById('pv-pin'); if (p) p.innerHTML = pinHtml(getEvent(el.value)); },
 });
 on({
@@ -92,6 +114,6 @@ on({
     const h = getHost(ME);
     const t = document.getElementById('pg-tag'), a = document.getElementById('pg-about');
     if (t) t.value = L(h.tagline); if (a) a.value = aboutText();
-    repaintPv(); toast(T('متن پیش‌فرض برگشت', 'Default text restored'), 'refresh');
+    repaintPv(); toast(T('متن اولیه برگشت', 'Default text restored'), 'refresh');
   },
 });

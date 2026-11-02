@@ -15,7 +15,7 @@ export const kpi = ({ label, value, fmt = 'int', sub = '', icon = '', hi = false
   </div>`;
 
 export const statusPill = (e) =>
-  e.status === 'cancelled' ? `<span class="pill off">${T('لغو شد', 'Cancelled')}</span>`
+  e.status === 'cancelled' ? `<span class="pill off">${T('کنسل شد', 'Cancelled')}</span>`
     : e.day < 0 ? `<span class="pill off">${T('برگزار شد', 'Held')}</span>`
     : e.day === 0 ? `<span class="pill em"><i class="dotlive"></i>${T('امروز', 'Today')}</span>`
     : `<span class="pill ok">${T('منتشرشده', 'Live')}</span>`;

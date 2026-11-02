@@ -22,8 +22,8 @@ export function render() {
   return `
   <div class="wrap narrow">
     <div class="st-head" style="margin-bottom:18px">
-      <div><h1 class="h1">${T('اعلان‌ها', 'Inbox')}</h1>${unread ? `<p class="muted st-sub">${T(`${unread} پیام خوانده‌نشده`, `${unread} unread`)}</p>` : ''}</div>
-      <div class="st-actions">${unread ? `<button class="btn btn-glass btn-sm" data-act="readAll">${ico('check', 15)} ${T('همه خوانده شد', 'Mark all read')}</button>` : ''}</div>
+      <div><h1 class="h1">${T('اعلان‌ها', 'Inbox')}</h1>${unread ? `<p class="muted st-sub">${T(`${unread} پیام نخونده`, `${unread} unread`)}</p>` : ''}</div>
+      <div class="st-actions">${unread ? `<button class="btn btn-glass btn-sm" data-act="readAll">${ico('check', 15)} ${T('همه رو خوندم', 'Mark all read')}</button>` : ''}</div>
     </div>
     ${items.length ? `<div class="inbox-list">${items.map((n) => `
       <button class="msg ${n.read ? '' : 'unread'}" data-act="openMsg" data-id="${n.id}">
@@ -35,7 +35,7 @@ export function render() {
         </div>
         ${n.read ? '' : '<i class="msg-dot"></i>'}
       </button>`).join('')}</div>`
-      : empty('bell', T('صندوق خالی است', 'All quiet'), T('وقتی میزبانی پیامی بفرستد یا رزروی تأیید شود، اینجا می‌آید.', 'Host messages and booking confirmations will show up here.'))}
+      : empty('bell', T('خبری نیست', 'All quiet'), T('هر وقت میزبانی پیام بده یا رزروت تأیید بشه، اینجا میاد.', 'Host messages and booking confirmations will show up here.'))}
   </div>`;
 }
 

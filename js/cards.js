@@ -47,7 +47,7 @@ export function hostCard(h) {
 }
 export function followBtn(id, size = 'sm') {
   const f = following(id);
-  return `<button class="btn btn-${size === 'sm' ? 'sm' : 'primary'} follow ${f ? 'btn-glass is-on' : (size === 'sm' ? 'btn-bone' : '')}" data-act="follow" data-id="${id}" aria-pressed="${f}" style="position:relative;z-index:2">${f ? ico('check', 15) + ' ' + T('دنبال می‌کنی', 'Following') : ico('plus', 15) + ' ' + T('دنبال کردن', 'Follow')}</button>`;
+  return `<button class="btn btn-${size === 'sm' ? 'sm' : 'primary'} follow ${f ? 'btn-glass is-on' : (size === 'sm' ? 'btn-bone' : '')}" data-act="follow" data-id="${id}" aria-pressed="${f}" style="position:relative;z-index:2">${f ? ico('check', 15) + ' ' + T('دنبالش می‌کنی', 'Following') : ico('plus', 15) + ' ' + T('دنبال کن', 'Follow')}</button>`;
 }
 
 /* ─────────────────────────────────────────────────────────────── actions */
@@ -72,18 +72,18 @@ on({
       b.classList.toggle('is-on', !was); b.classList.toggle('btn-glass', !was);
       if (sm) b.classList.toggle('btn-bone', was);
       b.setAttribute('aria-pressed', !was);
-      b.innerHTML = !was ? `${ico('check', 15)} ${T('دنبال می‌کنی', 'Following')}` : `${ico('plus', 15)} ${T('دنبال کردن', 'Follow')}`;
+      b.innerHTML = !was ? `${ico('check', 15)} ${T('دنبالش می‌کنی', 'Following')}` : `${ico('plus', 15)} ${T('دنبال کن', 'Follow')}`;
     });
     document.querySelectorAll(`[data-fcount="${id}"]`).forEach((n) => { n.textContent = compact(h.followersNow); });
-    toast(was ? T('دیگر دنبال نمی‌کنی', 'Unfollowed') : T(`${L(h.name)} را دنبال می‌کنی`, `You follow ${L(h.name)}`), 'check');
-    if (id === ME && !was) toast(T('به مخاطبان جریان اضافه شدی', "You're now in Jaryan's audience"), 'users');
+    toast(was ? T('دیگه دنبالش نمی‌کنی', 'Unfollowed') : T(`حالا ${L(h.name)} رو دنبال می‌کنی`, `You follow ${L(h.name)}`), 'check');
+    if (id === ME && !was) toast(T('جریان از این به بعد خبرهاشو برات می‌فرسته', "You're now in Jaryan's audience"), 'users');
   },
   share(el) {
     const id = el.dataset.id; const e = id ? getEvent(id) : null;
     const url = location.href.split('#')[0] + (e ? `#/e/${e.id}` : '');
     const data = { title: e ? L(e.title) : 'Went to Event', url };
     if (navigator.share) navigator.share(data).catch(() => {});
-    else navigator.clipboard?.writeText(url).then(() => toast(T('لینک کپی شد', 'Link copied'), 'link')).catch(() => toast(T('لینک کپی نشد', "Couldn't copy"), 'info'));
+    else navigator.clipboard?.writeText(url).then(() => toast(T('لینک کپی شد', 'Link copied'), 'link')).catch(() => toast(T('لینک کپی نشد، دوباره امتحان کن', "Couldn't copy"), 'info'));
     if (!navigator.share && !navigator.clipboard) toast(url, 'link');
   },
 });
