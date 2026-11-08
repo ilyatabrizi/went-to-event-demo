@@ -204,3 +204,23 @@ body[data-bare] .edge{opacity:0}
 @media (max-width:360px){.ov-next .row-btns.eq{grid-template-columns:1fr}}
 .hp-contacts{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));overflow:visible}
 .hp-ct{min-width:0;padding-inline:4px}
+
+/* ── v5: setup checklist shows only what's left; done steps collapse into chips ── */
+.setup-done{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 2px}
+.setup-done .pill{display:inline-flex;align-items:center;gap:4px}
+.setup-i.next{background:var(--ember-soft)}
+.setup-i.next .setup-ck{background:var(--ember);box-shadow:none;color:var(--on-ember)}
+.tool .small{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.45}
+.se-act{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.se-act .grow{flex:1}
+.se-rev{color:var(--fg);font-weight:700}
+.se-row{flex-wrap:wrap}
+.se-row .se-act{flex-basis:100%;justify-content:flex-start;padding-top:10px;margin-top:2px;border-top:1px solid var(--line);position:relative;z-index:2}
+.saved-ind{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--ok-ink);opacity:0;transform:translateY(4px);transition:opacity .25s,transform .25s;pointer-events:none}
+.saved-ind.on{opacity:1;transform:none}
+.tk-cancel{display:flex;margin:10px auto 0;color:var(--muted)}
+@media (hover:hover){.tk-cancel:hover{color:var(--ember-ink)}}
+.tk-rev{margin:10px 14px 14px}
+.pill-btn{display:inline-flex;align-items:center;gap:4px;cursor:pointer;border:0;font:inherit;white-space:nowrap}
+.pill-btn[disabled]{cursor:default}
+@media (hover:hover){.pill-btn:not([disabled]):hover{filter:brightness(1.12)}}

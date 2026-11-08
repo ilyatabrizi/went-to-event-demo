@@ -4,7 +4,7 @@
 import { S } from './store.js';
 import { EVENTS, HOSTS, CONTACTS, DOOR, ME, SEED_TAGS, SEED_NOTES, REVIEWS, SEED_CODES } from './data.js';
 import { L, T } from './i18n.js';
-import { rng, hash, DAY, sum } from './util.js';
+import { rng, hash, DAY, sum, today0 } from './util.js';
 
 const NOW0 = Date.now();
 
@@ -96,9 +96,11 @@ export function guests(eventId) {
   const e = getEvent(eventId);
   if (!e) return [];
   const st = S().studio;
-  const seeded = (ATT[eventId] || []).map((a) => ({ key: a.code, c: a.c, qty: a.qty, paid: a.paid, code: a.code, ts: a.ts, kind: 'seed', amount: e.price * a.qty }));
+  const doorPaid = st.doorPaid?.[eventId] || {};
+  const seeded = (ATT[eventId] || []).map((a) => ({ key: a.code, c: a.c, qty: a.qty, paid: a.paid || !!doorPaid[a.code], door: !a.paid && !!doorPaid[a.code], code: a.code, ts: a.ts, kind: 'seed', amount: e.price * a.qty }));
   const mine = S().bookings.filter((b) => b.event === eventId).map((b) => ({ key: b.code, c: 'me', qty: b.qty, paid: true, code: b.code, ts: b.at, kind: 'live', bid: b.id, amount: b.total ?? e.price * b.qty, promo: b.promo || null }));
-  const walks = st.walkins.filter((w) => w.event === eventId).map((w) => ({ key: w.code, c: w.cid, qty: w.qty, paid: true, code: w.code, ts: w.at, kind: 'walk', wid: w.id, amount: e.price * w.qty }));
+  /* walk-ins pay the host in person (door money, not held by the platform); tickets scanned from another phone were paid online */
+  const walks = st.walkins.filter((w) => w.event === eventId).map((w) => ({ key: w.code, c: w.cid, qty: w.qty, paid: true, door: !w.online, code: w.code, ts: w.at, kind: 'walk', wid: w.id, amount: w.amount ?? e.price * w.qty }));
   const checked = st.checkins[eventId] || {};
   return [...seeded, ...mine, ...walks].map((g) => ({ ...g, in: !!checked[g.key] }));
 }
@@ -210,7 +212,12 @@ export function activity(limit = 8) {
 
 /* ─────────────────────────────────────────────── notification helpers */
 export const unread = () => S().inbox.filter((n) => !n.read).length;
-export const ticketsFor = () => S().bookings.map((b) => ({ ...b, ev: getEvent(b.event) })).filter((b) => b.ev);
+/* a ticket remembers the calendar day it was booked for, so once that day has gone it moves to Past and can be reviewed */
+export const ticketsFor = () => S().bookings.map((b) => {
+  const e = getEvent(b.event); if (!e) return null;
+  const day = b.evAt ? Math.round((b.evAt - today0().getTime()) / DAY) : e.day;
+  return { ...b, ev: day === e.day ? e : { ...e, day } };
+}).filter(Boolean);
 export const myUpcoming = () => ticketsFor().filter((b) => b.ev.day >= 0).sort((a, b) => a.ev.day - b.ev.day);
 export const myPast = () => ticketsFor().filter((b) => b.ev.day < 0);
 
@@ -271,14 +278,17 @@ export function canReview(host) {
 /* ──────────────────────────────────────────────────────────────── money */
 export function finances() {
   const evs = eventsOf(ME).filter((e) => e.status !== 'cancelled');
-  let held = 0, upcomingPaid = 0, unpaid = 0;
+  let held = 0, upcomingPaid = 0, unpaid = 0, door = 0;
   const rows = [];
   for (const e of evs) {
-    let p = 0, u = 0, promo = 0;
-    for (const g of guests(e.id)) { if (g.paid) p += g.amount; else u += g.amount; if (g.promo) promo += e.price * g.qty - g.amount; }
+    let p = 0, u = 0, d = 0, promo = 0;
+    for (const g of guests(e.id)) {
+      if (g.paid && g.door) d += g.amount; else if (g.paid) p += g.amount; else u += g.amount;
+      if (g.promo) promo += e.price * g.qty - g.amount;
+    }
     if (e.day < 0) held += p; else upcomingPaid += p;
-    unpaid += u;
-    if (p || u) rows.push({ e, paid: p, unpaid: u, promo });
+    unpaid += u; door += d;
+    if (p || u || d) rows.push({ e, paid: p, unpaid: u, door: d, promo });
   }
   /* two settlements already paid out, as a share of what past events earned */
   const seed = [
@@ -287,5 +297,5 @@ export function finances() {
   ];
   const payouts = [...S().studio.payouts, ...seed].sort((a, b) => b.ts - a.ts);
   const settled = sum(payouts, (p) => p.amount);
-  return { available: Math.max(0, held - settled), upcoming: upcomingPaid, unpaid, held, settled, payouts, rows: rows.sort((a, b) => b.e.day - a.e.day) };
+  return { available: Math.max(0, held - settled), upcoming: upcomingPaid, unpaid, door, held, settled, payouts, rows: rows.sort((a, b) => b.e.day - a.e.day) };
 }

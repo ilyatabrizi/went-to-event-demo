@@ -2,7 +2,7 @@
 import { S, commit } from '../store.js';
 import { T, L } from '../i18n.js';
 import { ico } from '../icons.js';
-import { esc, nf, money, compact, dFull, dateOf, timeRange, relDay, csv, download, normPhone, validPhone, fmtPhone, sum, uid, readTicket } from '../util.js';
+import { esc, nf, money, compact, dFull, dateOf, timeRange, relDay, csv, download, normPhone, validPhone, fmtPhone, sum, uid, readTicket, toLatinDigits } from '../util.js';
 import { getEvent, seats, guests, audience, contact } from '../model.js';
 import { ME } from '../data.js';
 import { poster, person, ring, empty, on, onInput, openSheet, closeSheets, toast } from '../ui.js';
@@ -29,7 +29,7 @@ export function render(id) {
   if (!e || e.host !== ME) return `<div class="wrap st-wrap">${empty('calendar', T('این رویداد پیدا نشد', 'Event not found'), '', `<a class="btn btn-primary" href="#/studio/events">${T('همه‌ی رویدادها', 'All events')}</a>`)}</div>`;
   const s = seats(e), rows = rowsFor(e), past = e.day < 0, off = e.status === 'cancelled';
   const inPeople = sum(rows.filter((r) => r.in), (r) => r.qty);
-  const paid = sum(rows.filter((r) => r.paid), (r) => r.qty) * e.price, pend = sum(rows.filter((r) => !r.paid), (r) => r.qty) * e.price;
+  const paid = sum(rows.filter((r) => r.paid), (r) => r.amount), pend = sum(rows.filter((r) => !r.paid), (r) => r.amount);
   const q = gq.trim().toLowerCase();
 
   return `
@@ -69,7 +69,8 @@ export function render(id) {
           <span class="g-name">${esc(r.name)}${r.qty > 1 ? ` <span class="qty latin">×${r.qty}</span>` : ''}</span>
           <span class="small muted"><span class="code">${esc(r.code)}</span>${r.isMe ? ` · ${T('تو', 'You')}` : ''}${r.walk ? ` · ${T('حضوری', 'Walk-in')}` : ''}</span>
         </button>
-        <span class="pill ${r.paid ? 'ok' : 'em'}">${r.paid ? T('پرداخت‌شده', 'Paid') : T('پرداخت نشده', 'Unpaid')}</span>
+        ${r.paid ? `<span class="pill ok">${r.door ? T('دم در پرداخت شد', 'Paid at door') : T('پرداخت‌شده', 'Paid')}</span>`
+          : `<button class="pill em pill-btn" data-act="gpaid" data-event="${e.id}" data-key="${esc(r.key)}" ${past || off ? 'disabled' : ''} title="${T('اگه پولشو گرفتی بزن', 'Tap once you have collected it')}">${ico('wallet', 12)} ${T('پرداخت نشده · ثبتش کن', 'Unpaid · mark paid')}</button>`}
       </div>`).join('')}</div>
       <div class="empty compact" id="g-none" hidden><p class="small muted">${T('چیزی پیدا نشد.', 'No match.')}</p></div>`
       : empty('users', T('هنوز کسی رزرو نکرده', 'No guests yet'), T('هر کی جا بگیره، اسمش همین‌جا میاد.', 'When someone reserves on Went to Event, they appear here.'))}
@@ -89,9 +90,11 @@ function setIn(eventId, key, val) {
   paintCounts();
 }
 const findGuest = (eventId, input) => {
-  let k = String(input || '').trim().toUpperCase().replace(/\s+/g, '');
-  if (/^\d{4}$/.test(k)) k = 'JRN-' + k;
-  return guests(eventId).find((g) => g.key.toUpperCase() === k) || null;
+  let k = toLatinDigits(String(input || '')).trim().toUpperCase().replace(/[\s-]+/g, '');
+  if (!k || k.startsWith('WTE1|')) return null;
+  const flat = (c) => c.toUpperCase().replace(/-/g, '');
+  const list = guests(eventId);
+  return list.find((g) => flat(g.code) === k) || (/^W?\d{3,4}$/.test(k) ? list.find((g) => flat(g.code).endsWith(k)) : null) || null;
 };
 
 onInput({
@@ -109,7 +112,12 @@ on({
     const g = guests(event).find((x) => x.key === key);
     setIn(event, key, !cur);
     navigator.vibrate?.(8);
-    if (!cur && g && !g.paid) toast(T('پول این بلیت هنوز داده نشده؛ دم در بگیر', 'Payment still pending — collect at the door'), 'wallet');
+    if (!cur && g && !g.paid) toast(T('پول این بلیت هنوز داده نشده؛ بعد از گرفتن، روی «گرفتم» بزن', 'Payment still pending — tap “mark paid” once collected'), 'wallet');
+  },
+  gpaid(el) {
+    const { event, key } = el.dataset;
+    commit((s) => { (s.studio.doorPaid[event] ||= {})[key] = true; });
+    toast(T('پرداخت دم در ثبت شد', 'Marked as paid at the door'), 'wallet');
   },
 
   mScan(el) {
@@ -138,15 +146,18 @@ on({
       navigator.vibrate?.(kind === 'bad' ? [30, 40, 30] : 14);
     };
     const run = (raw) => {
+      const direct = findGuest(id, raw);
+      if (direct) { if (direct.in) return show(direct, 'dup'); setIn(id, direct.key, true); return show(direct, 'ok'); }
       const t = readTicket(raw);
       if (!t) return show(null, 'bad');
       if (t.event && t.event !== id) return show(null, 'bad', T('این بلیت مال یه رویداد دیگه‌ست', 'This ticket is for another event'));
       const g = findGuest(id, t.code);
       if (g) { if (g.in) return show(g, 'dup'); setIn(id, g.key, true); return show(g, 'ok'); }
       if (!t.event) return show(null, 'bad');
+      if (seats(getEvent(id)).left < t.qty) return show(null, 'bad', T('ظرفیت این رویداد پره', 'This event is full'));
       /* a ticket booked on another phone: the QR carries the booking, so admit it and add it to the list */
       commit((x) => {
-        x.studio.walkins.push({ id: uid('w'), cid: uid('cw'), event: id, name: t.name || T('مهمون', 'Guest'), phone: '', qty: t.qty, at: Date.now(), code: t.code, online: true });
+        x.studio.walkins.push({ id: uid('w'), cid: uid('cw'), event: id, name: t.name || T('مهمون', 'Guest'), phone: '', qty: t.qty, at: Date.now(), code: t.code, online: true, amount: t.amount ?? undefined });
         (x.studio.checkins[id] ||= {})[t.code] = true;
       });
       show({ name: t.name, qty: t.qty, code: t.code, paid: true }, 'ok');
@@ -156,8 +167,11 @@ on({
     const start = async () => {
       if (!navigator.mediaDevices?.getUserMedia) { msg(`<span class="micro">${T('این مرورگر به دوربین دسترسی نمی‌ده؛ کد رو تایپ کن', "This browser can't use the camera — type the code")}</span>`); return; }
       try {
-        [stream] = await Promise.all([navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }), loadJsQR()]);
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
         if (s.closed) { stop(); return; }
+        try { await loadJsQR(); } catch (_) {
+          stop(); msg(`${ico('info', 24)}<span class="micro">${T('اسکنر بارگذاری نشد (اینترنت ضعیفه). کد بلیت رو پایین تایپ کن.', "The scanner didn't load (weak connection). Type the ticket code below.")}</span><button class="btn btn-glass btn-xs" data-retry>${T('دوباره امتحان کن', 'Try again')}</button>`); return;
+        }
         const v = s.$('#sc-v'); v.srcObject = stream; v.hidden = false; await v.play();
         msg(''); s.$('#sc-box').classList.add('live');
         const cv = document.createElement('canvas'); const cx = cv.getContext('2d', { willReadFrequently: true });
@@ -202,7 +216,8 @@ on({
       const name = s.$('#w-n').value.trim(), phone = s.$('#w-p').value.trim();
       if (name.length < 2) { s.$('#w-n').classList.add('err'); s.$('#w-n').focus(); return; }
       if (phone && !validPhone(phone)) { const x = s.$('#w-e'); x.hidden = false; x.textContent = T('شماره باید با ۰۹ شروع بشه و ۱۱ رقم باشه', 'Enter a mobile number starting with 09 (11 digits)'); s.$('#w-p').focus(); return; }
-      const code = 'JRN-W' + (100 + Math.floor(Math.random() * 899));
+      const used = new Set(guests(id).map((g) => g.code));
+      let code; do { code = 'JRN-W' + (100 + Math.floor(Math.random() * 900)); } while (used.has(code));
       commit((x) => {
         x.studio.walkins.push({ id: uid('w'), cid: uid('cw'), event: id, name, phone: phone ? normPhone(phone) : '', qty, at: Date.now(), code });
         (x.studio.checkins[id] ||= {})[code] = true;

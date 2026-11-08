@@ -26,12 +26,13 @@ export function render() {
       <div class="money-big tnum" data-count="${f.available}" data-fmt="int">0</div>
       <div class="small muted">${T('تومان', 'toman')}</div>
       <button class="btn btn-primary" data-act="payReq" ${f.available < 100000 ? 'disabled' : ''}>${ico('wallet', 17)} ${T('درخواست تسویه', 'Request payout')}</button>
-      <div class="small muted money-acct">${ico('lock', 14)} ${T(`به حساب شبای منتهی به ${nf(Number(PAYOUT_ACCOUNT.last4))}`, `To the IBAN ending ${PAYOUT_ACCOUNT.last4}`)}</div>
+      ${f.available < 100000 ? `<div class="small muted">${f.payouts.some((p) => p.status !== 'done') ? T('درخواست قبلیت در حال بررسیه.', 'Your last request is being processed.') : T('برداشت از ۱۰۰ هزار تومان به بالا ممکنه.', 'Payouts start from 100,000 toman.')}</div>` : ''}
+      <div class="small muted money-acct">${ico('lock', 14)} ${T('به حساب شبای منتهی به', 'To the IBAN ending')} <span class="tnum">${esc(PAYOUT_ACCOUNT.last4)}</span></div>
     </section>
 
     <section class="mini-kpis three">
       <div class="card"><span class="micro">${T('مال رویدادهای پیش رو', 'Held for upcoming')}</span><b class="tnum">${compact(f.upcoming)}</b><span class="small muted">${T('بعد از برگزاری آزاد می‌شه', 'Released after the event')}</span></div>
-      <div class="card"><span class="micro">${T('دم در گرفته می‌شه', 'To collect at the door')}</span><b class="tnum">${compact(f.unpaid)}</b><span class="small muted">${T('رزروهایی که هنوز پرداخت نشدن', 'Bookings not paid yet')}</span></div>
+      <div class="card"><span class="micro">${T('پرداخت دم در', 'Paid at the door')}</span><b class="tnum">${f.door ? compact(f.door) : '—'}</b><span class="small muted">${f.unpaid ? T(`${compact(f.unpaid)} هنوز باید بگیری`, `${compact(f.unpaid)} still to collect`) : T('مستقیم دست خودت', 'Straight to you')}</span></div>
       <div class="card"><span class="micro">${T('تا حالا واریز شده', 'Paid out so far')}</span><b class="tnum">${compact(f.settled)}</b><span class="small muted">${T(`${nf(f.payouts.length)} بار تسویه`, `${f.payouts.length} payouts`)}</span></div>
     </section>
 
@@ -40,7 +41,7 @@ export function render() {
       <a class="li" href="#/studio/events/${r.e.id}">
         <div class="thumb sm">${poster(r.e, 480)}</div>
         <div class="grow"><div class="li-t">${esc(L(r.e.title))}</div><div class="li-s">${esc(dFull(new Date(Date.now() + r.e.day * 864e5)))}${r.promo ? ` · ${T(`${compact(r.promo)} تخفیف داده شد`, `${compact(r.promo)} in discounts`)}` : ''}</div></div>
-        <div class="money-cell"><b class="tnum">${compact(r.paid)}</b>${r.unpaid ? `<span class="micro ember">+${compact(r.unpaid)} ${T('دم در', 'at door')}</span>` : `<span class="micro">${r.e.day < 0 ? T('آزاد شده', 'Released') : T('در انتظار', 'Held')}</span>`}</div>
+        <div class="money-cell"><b class="tnum">${compact(r.paid + r.door)}</b>${r.unpaid ? `<span class="micro ember">+${compact(r.unpaid)} ${T('دم در', 'at door')}</span>` : `<span class="micro">${r.e.day < 0 ? T('آزاد شده', 'Released') : T('در انتظار', 'Held')}</span>`}</div>
       </a>`).join('')}</div>
 
     <h2 class="h2 sub-h">${T('تسویه‌ها', 'Payouts')}</h2>
@@ -58,13 +59,14 @@ on({
       title: T('درخواست تسویه', 'Request a payout'),
       body: `
         <div class="pay-sum"><span class="micro">${T('مبلغ', 'Amount')}</span><b class="tnum">${money(f.available)}</b></div>
-        <div class="li-plain" style="margin-top:14px">${ico('lock', 18)}<div><div class="micro">${T('واریز به', 'Paid to')}</div><div>${esc(L(PAYOUT_ACCOUNT.holder))} · ${T(`شبای منتهی به ${nf(Number(PAYOUT_ACCOUNT.last4))}`, `IBAN ending ${PAYOUT_ACCOUNT.last4}`)}</div></div></div>
+        <div class="li-plain" style="margin-top:14px">${ico('lock', 18)}<div><div class="micro">${T('واریز به', 'Paid to')}</div><div>${esc(L(PAYOUT_ACCOUNT.holder))} · ${T('شبای منتهی به', 'IBAN ending')} <span class="tnum">${esc(PAYOUT_ACCOUNT.last4)}</span></div></div></div>
         <p class="small muted" style="margin-top:14px">${T('معمولاً تا یه روز کاری به حسابت می‌رسه.', 'Usually lands within one working day.')}</p>`,
       foot: `<button class="btn btn-primary btn-block" data-go>${T('تأیید و ثبت درخواست', 'Confirm request')}</button>`,
     });
     s.el.addEventListener('click', (ev) => {
-      if (!ev.target.closest('[data-go]')) return;
-      commit((st) => { st.studio.payouts.unshift({ id: uid('p'), amount: f.available, ts: Date.now(), status: 'pending', ref: 'STL-' + (48300 + st.studio.payouts.length + 1) }); });
+      if (!ev.target.closest('[data-go]') || s.closed) return;
+      const amt = finances().available; if (amt <= 0) { s.close(); return; }
+      commit((st) => { st.studio.payouts.unshift({ id: uid('p'), amount: amt, ts: Date.now(), status: 'pending', ref: 'STL-' + (48300 + st.studio.payouts.length + 1) }); });
       s.close(); toast(T('درخواستت ثبت شد', 'Payout requested'), 'wallet');
     });
   },

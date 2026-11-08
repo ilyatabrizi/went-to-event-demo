@@ -1,13 +1,13 @@
 /* One event. The top bar and tab bar step away; a floating glass dock carries back / share / save and the reserve bar. */
-import { S } from '../store.js';
+import { S, commit } from '../store.js';
 import { T, L, LL } from '../i18n.js';
 import { ico } from '../icons.js';
 import { esc, nf, money, dFull, dateOf, timeRange, relDay } from '../util.js';
 import { getEvent, getHost, seats, eventsOf, isLive, byTime, following } from '../model.js';
 import { FAQ, ME, jimg } from '../data.js';
-import { poster, avatar, verified, sampleTag, catName, evTile, sectionHead, empty, on, dchip, openSheet } from '../ui.js';
+import { poster, avatar, verified, sampleTag, catName, evTile, sectionHead, empty, on, dchip, openSheet, toast } from '../ui.js';
 import { followBtn } from '../cards.js';
-import { navigate } from '../app.js';
+import { navigate, canGoBack } from '../app.js';
 
 export const title = (id) => { const e = getEvent(id); return e ? L(e.title) : T('رویداد', 'Event'); };
 
@@ -105,8 +105,10 @@ export function dock(id) {
     buy = `<div class="dk-price"><b>${T('جات رزرو شده', "You're in")}</b><span class="micro">${T(`${nf(n)} نفر`, `${n} guest${n > 1 ? 's' : ''}`)}</span></div>
       <button class="btn btn-bone" data-act="ticket" data-id="${mine[0].id}">${ico('ticket', 18)} ${T('دیدن بلیت', 'View ticket')}</button>`;
   } else if (s.full) {
-    buy = `<div class="dk-price"><b>${T('ظرفیت پر شده', 'Sold out')}</b><span class="micro">${T('اگه جا خالی شد خبرم کن', 'Follow to hear first')}</span></div>
-      <button class="btn btn-glass" disabled>${T('تکمیل', 'Sold out')}</button>`;
+    const waiting = (S().waitlist || []).includes(e.id);
+    buy = `<div class="dk-price"><b>${T('ظرفیت پر شده', 'Sold out')}</b><span class="micro">${waiting ? T('اگه جا خالی بشه خبرت می‌کنیم', "We'll tell you if a spot opens") : T('شاید یکی کنسل کنه', 'Someone may cancel')}</span></div>
+      ${waiting ? `<button class="btn btn-glass" data-act="waitOff" data-id="${e.id}">${ico('check', 17)} ${T('تو صفی', 'On the list')}</button>`
+        : `<button class="btn btn-bone" data-act="waitOn" data-id="${e.id}">${ico('bell', 17)} ${T('خبرم کن', 'Notify me')}</button>`}`;
   } else {
     buy = `<div class="dk-price"><b>${money(e.price)}</b><span class="micro">${s.left <= 5 ? `<span class="ember">${T(`${nf(s.left)} جای خالی`, `${s.left} left`)}</span>` : T('برای هر نفر', 'per person')}</span></div>
       <button class="btn btn-primary" data-act="book" data-id="${e.id}">${T('رزرو کن', 'Reserve')} ${ico('arrow', 18)}</button>`;
@@ -123,6 +125,16 @@ export function dock(id) {
 }
 
 on({
-  back() { if (history.length > 1) history.back(); else navigate('/'); },
+  back() { if (canGoBack()) history.back(); else navigate('/'); },
+  waitOn(el) {
+    const id = el.dataset.id, e = getEvent(id);
+    commit((s) => { s.waitlist = [...new Set([...(s.waitlist || []), id])]; if (!s.following.includes(e.host)) { s.following.push(e.host); s.followedAt[e.host] = Date.now(); } });
+    toast(T('اگه جا خالی شد خبرت می‌کنیم؛ میزبان رو هم دنبال کردی', "We'll tell you if a spot opens — you now follow the host too"), 'bell');
+  },
+  waitOff(el) {
+    const id = el.dataset.id;
+    commit((s) => { s.waitlist = (s.waitlist || []).filter((x) => x !== id); });
+    toast(T('از صف انتظار دراومدی', 'Removed from the waitlist'), 'check');
+  },
   photo(el) { openSheet({ title: '', cls: 'lightbox', body: `<img class="lb-img" src="${el.dataset.src}" alt="">` }); },
 });

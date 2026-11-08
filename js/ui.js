@@ -43,6 +43,19 @@ export function toast(text, icon = 'check') {
   while (host.children.length > 2) host.firstChild.remove();
 }
 
+/* copy with a fallback for http pages / older browsers, and always say what happened */
+export function copyText(text, okMsg) {
+  const ok = () => toast(okMsg || T('کپی شد', 'Copied'), 'copy');
+  const legacy = () => {
+    try {
+      const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;opacity:0;top:0';
+      document.body.appendChild(ta); ta.select(); const done = document.execCommand('copy'); ta.remove();
+      if (done) ok(); else toast(text, 'link');
+    } catch (_) { toast(text, 'link'); }
+  };
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(ok).catch(legacy); else legacy();
+}
+
 /* ───────────────────────────────────────────────────────────── sheets */
 const sheets = [];
 export function openSheet({ title = '', body = '', foot = '', full = false, cls = '', onClose, onMount } = {}) {
@@ -76,6 +89,7 @@ export function openSheet({ title = '', body = '', foot = '', full = false, cls 
       if (api.closed) return; api.closed = true;
       const i = sheets.indexOf(api); if (i >= 0) sheets.splice(i, 1);
       el.classList.remove('in'); scrim.classList.remove('in');
+      el.style.pointerEvents = 'none'; el.inert = true;
       if (!sheets.length) document.documentElement.classList.remove('sheet-open');
       setTimeout(() => { el.remove(); scrim.remove(); }, 520);
       onClose?.();
@@ -143,8 +157,13 @@ export function person(name, size = 38) {
 
 /* ───────────────────────────────────────────────────────────── posters */
 export function poster(e, w = 480) {
-  if (e.bloom) {
-    return `<div class="poster bloom" style="${bloom(e.id)}"></div>`;
+  if (e.bloom && !e.cover) {
+    /* no photo of its own: borrow the category's photograph, cropped per event so neighbours differ */
+    const c = CATEGORIES.find((x) => x.id === e.cat);
+    if (!c) return `<div class="poster bloom" style="${bloom(e.id)}"></div>`;
+    const alt = e.cat === 'trips' && (e.id.length % 2) ? 'assets/cats/flight.webp' : c.img;
+    const pos = ['50% 50%', '30% 40%', '70% 45%', '50% 25%'][[...e.id].reduce((a, ch) => a + ch.charCodeAt(0), 0) % 4];
+    return `<div class="poster"><img src="${alt}" alt="" loading="lazy" decoding="async" style="object-position:${pos}"></div>`;
   }
   const key = e.img || 'workshop-table';
   const src = e.cover || `assets/jaryan/${key}-${w}.webp`;
@@ -265,6 +284,7 @@ export function tabs(key, items, def) {
 }
 export const panel = (key, id, html) => `<div class="tab-panel" data-panel="${key}:${id}" ${tabMem[key] === id ? '' : 'hidden'}>${html}</div>`;
 export const tabCur = (key) => tabMem[key];
+export const setTab = (key, id) => { tabMem[key] = id; };
 
 export function placePill(seg, snap = false) {
   const pill = seg.querySelector('.seg-pill'); const b = seg.querySelector('button.on');

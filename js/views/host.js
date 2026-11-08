@@ -6,7 +6,7 @@ import { ico } from '../icons.js';
 import { esc, nf, nf1, compact, bloom, uid, ago } from '../util.js';
 import { getHost, eventsOf, isLive, byTime, reviewsOf, rating, canReview, getEvent, userName } from '../model.js';
 import { ABOUT, FAQ, GALLERY, ME, jimg } from '../data.js';
-import { avatar, verified, evRow, empty, tabs, panel, on, openSheet, toast, person } from '../ui.js';
+import { avatar, verified, evRow, empty, tabs, panel, on, openSheet, toast, person, copyText } from '../ui.js';
 import { followBtn, evHero } from '../cards.js';
 import { authed, authHost } from '../auth.js';
 import { stars, ratingBlock, starSvg } from '../studio/reviews.js';
@@ -23,7 +23,7 @@ function contactsOf(h) {
   if (pg.phone) out.push({ i: 'phone', t: T('تماس', 'Call'), href: `tel:${pg.phone.replace(/\s/g, '')}` });
   if (pg.telegram) out.push({ i: 'send', t: T('تلگرام', 'Telegram'), href: `https://t.me/${pg.telegram}` });
   if (ig) out.push({ i: 'ig', t: T('اینستاگرام', 'Instagram'), href: `https://instagram.com/${ig}` });
-  if (site) out.push({ i: 'globe', t: T('سایت', 'Website'), href: site });
+  if (site && /^https?:\/\/[^\s]+$/i.test(site)) out.push({ i: 'globe', t: T('سایت', 'Website'), href: site });
   if (h.address) out.push({ i: 'route', t: T('مسیریابی', 'Directions'), href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(L(h.address) + '، تبریز')}` });
   return out;
 }
@@ -56,7 +56,7 @@ export function render(id) {
   const revs = (mine ? pg.showReviews : true) ? reviewsOf(id) : [];
   const r = rating(id);
   const showRev = (mine ? pg.showReviews : r.n > 0);
-  const aboutParas = mine ? (pg.about ? String(pg.about).split(/\n{2,}|\n/).filter(Boolean) : LL(ABOUT)) : [L(h.tagline)];
+  const aboutParas = mine ? (pg.about != null ? String(pg.about).split(/\n{2,}|\n/).filter(Boolean) : LL(ABOUT)) : [L(h.tagline)];
   const contacts = contactsOf(h);
 
   const items = [{ id: 'events', label: T('رویدادها', 'Events'), n: ups.length }];
@@ -135,7 +135,7 @@ on({
     const h = getHost(el.dataset.id);
     const url = location.href.split('#')[0].split('?')[0] + '#/h/' + h.id;
     if (navigator.share) navigator.share({ title: `${L(h.name)} · Went to Event`, url }).catch(() => {});
-    else navigator.clipboard?.writeText(url).then(() => toast(T('لینک صفحه کپی شد', 'Page link copied'), 'link')).catch(() => toast(url, 'link'));
+    else copyText(url, T('لینک صفحه کپی شد', 'Page link copied'));
   },
   hpReviews(el) {
     const b = document.querySelector(`[data-tabs="host-${el.dataset.id}"] [data-tab="reviews"]`);

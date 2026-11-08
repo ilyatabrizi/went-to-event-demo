@@ -106,7 +106,7 @@ on({
       if (n.value.trim().length < 2) { n.classList.add('err'); n.focus(); return; }
       if (!validPhone(p.value)) { const e = s.$('#ha-e'); e.hidden = false; e.textContent = T('شماره باید با ۰۹ شروع بشه و ۱۱ رقم باشه', 'Enter a mobile number starting with 09 (11 digits)'); p.focus(); return; }
       commit((x) => { x.hostRequests.push({ id: uid('hr'), name: n.value.trim(), phone: normPhone(p.value), ig: s.$('#ha-i').value.trim(), ts: Date.now() }); }, { silent: true });
-      s.close(); toast(T('درخواستت رسید! به‌زودی باهات تماس می‌گیریم', "Got it — we'll call you soon"), 'check');
+      s.close(); toast(T('درخواستت ثبت شد؛ بعد از بررسی خبرت می‌کنیم', "Request saved — we'll get back to you after review"), 'check');
     });
   },
 });

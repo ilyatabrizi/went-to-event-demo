@@ -19,7 +19,7 @@ function preview() {
   const ups = eventsOf(ME).filter((e) => isLive(e) && e.day >= 0).sort(byTime);
   const pin = ups.find((e) => e.id === pg.pinned);
   const tabs = [T('رویدادها', 'Events'), pg.showReviews ? T('نظرات', 'Reviews') : '', pg.showAbout ? T('درباره', 'About') : '', pg.showGallery ? T('گالری', 'Gallery') : '', pg.showFaq ? T('پرسش‌ها', 'FAQ') : ''].filter(Boolean);
-  const contacts = [pg.phone && ['phone', T('تماس', 'Call')], pg.telegram && ['send', T('تلگرام', 'Telegram')], pg.instagram && ['ig', 'Instagram']].filter(Boolean);
+  const contacts = [pg.phone && ['phone', T('تماس', 'Call')], pg.telegram && ['send', T('تلگرام', 'Telegram')], pg.instagram && ['ig', T('اینستاگرام', 'Instagram')]].filter(Boolean);
   return `
     <div class="pv-cover"><img src="${h.cover}" alt=""><div class="pv-fade"></div></div>
     <div class="pv-body">
@@ -41,7 +41,7 @@ export function render() {
   return `
   <div class="wrap st-wrap">
     ${pageHead(T('صفحه‌ی جریان', 'Your page'), T('این همون چیزیه که مردم می‌بینن. هر چی عوض کنی همون لحظه ذخیره می‌شه.', 'This is what people see on Went to Event. Changes save as you type.'),
-      `<a class="btn btn-bone btn-sm" href="#/h/jaryan">${ico('eye', 16)} ${T('دیدن صفحه‌م', 'View public page')}</a>`)}
+      `<span class="saved-ind" id="pg-saved" aria-live="polite">${ico('check', 14)} ${T('ذخیره شد', 'Saved')}</span><a class="btn btn-bone btn-sm" href="#/h/jaryan">${ico('eye', 16)} ${T('دیدن صفحه‌م', 'View public page')}</a>`)}
     <div class="pg-grid">
       <div class="pg-form">
         <section class="card">
@@ -88,18 +88,20 @@ export function render() {
   </div>`;
 }
 
-let pvT = 0;
-const repaintPv = () => { const p = document.getElementById('pv'); if (p) p.innerHTML = preview(); };
+let pvT = 0, svT = 0;
+const saved = () => { const x = document.getElementById('pg-saved'); if (!x) return; x.classList.add('on'); clearTimeout(svT); svT = setTimeout(() => x.classList.remove('on'), 1600); };
+const repaintPv = () => { const p = document.getElementById('pv'); if (p) p.innerHTML = preview(); saved(); };
 onInput({
-  pgTag(el) { const v = el.value.trim(); commit((s) => { s.studio.page.tagline = v || null; }, { silent: true }); const t = document.getElementById('pv-tag'); if (t) t.textContent = L(getHost(ME).tagline); },
-  pgAbout(el) { commit((s) => { s.studio.page.about = el.value; }, { silent: true }); const a = document.getElementById('pv-about'); if (a) a.textContent = paras()[0] || ''; },
+  pgTag(el) { const v = el.value.trim(); commit((s) => { s.studio.page.tagline = v || null; }, { silent: true }); const t = document.getElementById('pv-tag'); if (t) t.textContent = L(getHost(ME).tagline); saved(); },
+  pgAbout(el) { commit((s) => { s.studio.page.about = el.value; }, { silent: true }); const a = document.getElementById('pv-about'); if (a) a.textContent = paras()[0] || ''; saved(); },
   pgField(el) {
     const k = el.dataset.k; let v = el.value.trim();
-    if (k === 'telegram' || k === 'instagram') v = v.replace(/^@+/, '');
+    if (k === 'telegram' || k === 'instagram') v = v.replace(/^@+/, '').replace(/.*(t\.me|instagram\.com)\//i, '').replace(/\/.*$/, '');
+    if (k === 'website' && v && !/^https?:\/\//i.test(v)) v = /^[a-z][\w+.-]*:/i.test(v) ? '' : 'https://' + v;
     commit((s) => { s.studio.page[k] = v; }, { silent: true });
     clearTimeout(pvT); pvT = setTimeout(repaintPv, 250);
   },
-  pgPin(el) { commit((s) => { s.studio.page.pinned = el.value || null; }, { silent: true }); const p = document.getElementById('pv-pin'); if (p) p.innerHTML = pinHtml(getEvent(el.value)); },
+  pgPin(el) { commit((s) => { s.studio.page.pinned = el.value || null; }, { silent: true }); const p = document.getElementById('pv-pin'); if (p) p.innerHTML = pinHtml(getEvent(el.value)); saved(); },
 });
 on({
   pgToggle(el) {

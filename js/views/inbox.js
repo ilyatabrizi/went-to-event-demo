@@ -7,6 +7,7 @@ import { getHost } from '../model.js';
 import { avatar, empty, on } from '../ui.js';
 import { navigate } from '../app.js';
 import { markSvg } from '../brand.js';
+import { openTicket } from '../booking.js';
 
 export const title = () => T('اعلان‌ها', 'Inbox');
 
@@ -40,9 +41,9 @@ export function render() {
 }
 
 /* read-state changes are silent so the page doesn't jump; the bell and cards are patched in place */
-const patch = () => {
-  document.querySelectorAll('.msg.unread').forEach((m) => { m.classList.remove('unread'); m.querySelector('.msg-dot')?.remove(); });
-  document.querySelectorAll('#topbar .icon-btn .dot').forEach((d) => d.remove());
+const patch = (only) => {
+  document.querySelectorAll('.msg.unread').forEach((m) => { if (only && m.dataset.id !== only) return; m.classList.remove('unread'); m.querySelector('.msg-dot')?.remove(); });
+  if (!S().inbox.some((n) => !n.read)) document.querySelectorAll('#topbar .icon-btn .dot').forEach((d) => d.remove());
 };
 export function mount() {
   const t = setTimeout(() => {
@@ -64,8 +65,11 @@ on({
   },
   openMsg(el) {
     const n = S().inbox.find((x) => x.id === el.dataset.id); if (!n) return;
-    if (!n.read) { commit((s) => { s.inbox.find((x) => x.id === n.id).read = true; }, { silent: true }); patch(); }
-    if (n.kind === 'booking') navigate('/tickets');
+    if (!n.read) { commit((s) => { s.inbox.find((x) => x.id === n.id).read = true; }, { silent: true }); patch(n.id); }
+    if (n.kind === 'booking') {
+      navigate('/tickets');
+      if (n.booking && S().bookings.some((b) => b.id === n.booking)) setTimeout(() => openTicket(n.booking), 420);
+    }
     else if (n.host) navigate('/h/' + n.host);
   },
 });

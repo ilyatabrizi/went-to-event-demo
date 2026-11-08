@@ -32,6 +32,11 @@ const fill = (text, c) => text.replace(/\{name\}/g, c ? first(c.name) : T('دو�
 
 const stack = (list) => `${list.slice(0, 5).map((c) => person(c.name, 30)).join('')}${list.length > 5 ? `<span class="av av-more latin" style="width:30px;height:30px">+${list.length - 5}</span>` : ''}`;
 
+/* a one-person message (from a contact card) doesn't stick: leaving the page goes back to groups */
+export function mount() {
+  return () => { if (!location.hash.startsWith('#/studio/broadcast')) prefs.to = null; };
+}
+
 export function render() {
   const list = recipients();
   const h = getHost(ME);

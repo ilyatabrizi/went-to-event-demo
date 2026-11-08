@@ -5,7 +5,8 @@ import { ico } from './icons.js';
 import { esc } from './util.js';
 import { ME } from './data.js';
 import { getHost, unread, myUpcoming } from './model.js';
-import { initActions, on, toast, avatar, verified, placeAllPills, countUp, closeSheets, openSheet } from './ui.js';
+import { prefs as xprefs } from './views/explore.js';
+import { initActions, on, toast, avatar, verified, placeAllPills, countUp, closeSheets, openSheet, copyText, hasSheet } from './ui.js';
 import { authed, signOut, setNext } from './auth.js';
 import { markSvg } from './brand.js';
 import { paintNav } from './nav.js';
@@ -180,13 +181,16 @@ on({
           <a class="li" href="#/h/${h.id}" data-close><span class="li-ico">${ico('eye', 19)}</span><div class="grow"><div class="li-t">${T('دیدن صفحه‌ی عمومی', 'View public page')}</div><div class="li-s">${T('همونی که بازدیدکننده‌ها می‌بینن', 'Exactly what visitors see')}</div></div>${ico('chev', 18, 'chev')}</a>
           <button class="li" data-copy><span class="li-ico">${ico('link', 19)}</span><div class="grow"><div class="li-t">${T('کپی لینک صفحه', 'Copy page link')}</div><div class="li-s latin ltr" style="text-align:start">${esc(url.replace(/^https?:\/\//, ''))}</div></div></button>
           <a class="li" href="#/studio/page" data-close><span class="li-ico">${ico('edit', 19)}</span><div class="grow"><div class="li-t">${T('ویرایش صفحه', 'Edit page')}</div></div>${ico('chev', 18, 'chev')}</a>
+          <a class="li" href="#/studio/money" data-close><span class="li-ico">${ico('wallet', 19)}</span><div class="grow"><div class="li-t">${T('مالی و تسویه', 'Money & payouts')}</div></div>${ico('chev', 18, 'chev')}</a>
+          <a class="li" href="#/studio/codes" data-close><span class="li-ico">${ico('tag', 19)}</span><div class="grow"><div class="li-t">${T('کدهای تخفیف', 'Discount codes')}</div></div>${ico('chev', 18, 'chev')}</a>
+          <a class="li" href="#/studio/reviews" data-close><span class="li-ico">${ico('star', 19)}</span><div class="grow"><div class="li-t">${T('نظرات مهمون‌ها', 'Guest reviews')}</div></div>${ico('chev', 18, 'chev')}</a>
         </div>`,
       foot: `<button class="btn btn-danger btn-block" data-out>${ico('back', 17)} ${T('خروج از حساب', 'Sign out')}</button>`,
     });
     s.el.addEventListener('click', (ev) => {
       if (ev.target.closest('[data-close]')) s.close();
       if (ev.target.closest('[data-copy]')) {
-        navigator.clipboard?.writeText(url).then(() => toast(T('لینک صفحه کپی شد', 'Page link copied'), 'link')).catch(() => toast(url, 'link'));
+        copyText(url, T('لینک صفحه کپی شد', 'Page link copied'));
         commit((x) => { x.studio.sharedPage = true; }, { silent: true });
       }
       if (ev.target.closest('[data-out]')) {
@@ -198,16 +202,29 @@ on({
   },
 });
 
+/* how many in-app steps were taken, so Back never drops a visitor out of the site */
+let inApp = 0;
+export const canGoBack = () => inApp > 0;
+
 /* ──────────────────────────────────────────────────────────────── boot */
 function boot() {
   const q = new URLSearchParams(location.search).get('lang');
-  if (q === 'en' || q === 'fa') setLang(q);
+  if (q === 'en' || q === 'fa') {
+    setLang(q);
+    try { const u = new URL(location.href); u.searchParams.delete('lang'); history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (_) { /* ignore */ }
+  }
   applyLang();
   initTheme();
   initActions();
 
   subscribe((opts) => { if (!opts.noRender) render({ keep: true }); });
-  window.addEventListener('hashchange', () => { closeSheets(); render(); });
+  window.addEventListener('hashchange', () => { inApp++; closeSheets(); render(); });
+  /* "/" jumps to search from anywhere (desktop) */
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || hasSheet()) return;
+    if (e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+    e.preventDefault(); xprefs.focus = true; navigate('/explore');
+  });
   window.addEventListener('resize', () => { placeAllPills($('#topbar'), true); placeAllPills($('#view'), true); });
   history.scrollRestoration = 'manual';
 

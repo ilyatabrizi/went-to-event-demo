@@ -6,7 +6,7 @@ import { esc, nf, money, compact, ago, dFull, dShort, dateOf, today0, relDay, ti
 import { revenue, revenueSeries, followerSeries, audience, nextEvent, seats, upcoming, eventsOf, getHost, getEvent, sources, activity, SEGMENTS, codes, rating, finances } from '../model.js';
 import { nf1 } from '../util.js';
 import { ME, SOURCES } from '../data.js';
-import { avatar, person, ring, bars, area, poster, on, openSheet, toast } from '../ui.js';
+import { avatar, person, ring, bars, area, poster, on, openSheet, toast, copyText } from '../ui.js';
 import { pageHead, kpi } from './kit.js';
 import { prefs as aprefs, openContact } from './audience.js';
 import { prefs as bprefs } from './broadcast.js';
@@ -43,26 +43,29 @@ function setupCard() {
   const st = S().studio;
   if (st.setupHidden) return '';
   const steps = [
-    { done: st.page.tagline != null || st.page.about != null, t: T('معرفی صفحه‌تو بنویس', 'Write your page intro'), s: T('یه خط شعار و چند جمله درباره‌ی خودتون', 'A one-line tagline and a few sentences about you'), go: 'href="#/studio/page"' },
-    { done: !!(st.page.phone || st.page.telegram), t: T('راه تماس بذار', 'Add a way to reach you'), s: T('شماره یا تلگرام، که مهمون‌ها راحت بپرسن', 'A phone number or Telegram so guests can ask'), go: 'href="#/studio/page"' },
-    { done: st.created.length > 0, t: T('یه رویداد جدید بساز', 'Create a new event'), s: T('کمتر از یه دقیقه طول می‌کشه', 'Takes under a minute'), go: 'data-act="seNew"' },
-    { done: st.codes != null, t: T('یه کد تخفیف بساز', 'Make a discount code'), s: T('برای مشتری‌های ثابت یا پست اینستاگرام', 'For regulars or an Instagram post'), go: 'href="#/studio/codes"' },
-    { done: st.sharedPage, t: T('لینک صفحه‌تو تو بیو اینستاگرام بذار', 'Put your page link in your Instagram bio'), s: T('بزن تا لینک کپی بشه', 'Tap to copy the link'), go: 'data-act="ovCopyLink"' },
-    { done: st.broadcasts.length > 0, t: T('اولین پیامتو بفرست', 'Send your first message'), s: T('یه یادآوری یا خبر رویداد بعدی', 'A reminder or news of the next event'), go: 'href="#/studio/broadcast"' },
+    { done: !!(st.page.tagline || st.page.about || L(getHost(ME).tagline)), t: T('معرفی صفحه‌تو بنویس', 'Write your page intro'), short: T('معرفی', 'Intro'), s: T('یه خط شعار و چند جمله درباره‌ی خودتون', 'A one-line tagline and a few sentences about you'), go: 'href="#/studio/page"' },
+    { done: !!(st.page.phone || st.page.telegram), t: T('شماره یا تلگرام بذار', 'Add a phone or Telegram'), short: T('راه تماس', 'Contact'), s: T('که مهمون‌ها قبل از رزرو راحت سؤال بپرسن', 'So guests can ask before they book'), go: 'href="#/studio/page"' },
+    { done: st.created.length > 0, t: T('یه رویداد جدید بساز', 'Create a new event'), short: T('رویداد', 'Event'), s: T('کمتر از یه دقیقه طول می‌کشه', 'Takes under a minute'), go: 'data-act="seNew"' },
+    { done: !!st.codeMade, t: T('یه کد تخفیف بساز', 'Make a discount code'), short: T('کد تخفیف', 'Code'), s: T('برای مشتری‌های ثابت یا پست اینستاگرام', 'For regulars or an Instagram post'), go: 'href="#/studio/codes"' },
+    { done: st.sharedPage, t: T('لینک صفحه‌تو کپی کن', 'Copy your page link'), short: T('لینک', 'Link'), s: T('برای بیو اینستاگرام؛ با یه تپ کپی می‌شه', 'For your Instagram bio — one tap copies it'), go: 'data-act="ovCopyLink"' },
+    { done: st.broadcasts.length > 0, t: T('اولین پیامتو بفرست', 'Send your first message'), short: T('پیام', 'Message'), s: T('یه یادآوری یا خبر رویداد بعدی', 'A reminder or news of the next event'), go: 'href="#/studio/broadcast"' },
   ];
   const n = steps.filter((x) => x.done).length;
   if (n === steps.length) return '';
+  const todo = steps.filter((x) => !x.done);
+  const tag = (x) => (x.go.startsWith('href') ? 'a' : 'button');
   return `
     <section class="setup card hi">
       <div class="setup-head">
-        <div class="grow"><div class="micro ember">${T('شروع کار', 'Getting started')}</div><h2 class="h2" style="margin-top:6px">${T('صفحه‌تو کامل کن', 'Finish setting up')}</h2></div>
+        <div class="grow"><div class="micro ember">${T('شروع کار', 'Getting started')}</div><h2 class="h3" style="margin-top:4px">${T(`${nf(todo.length)} قدم تا یه صفحه‌ی کامل`, `${todo.length} steps to a complete page`)}</h2></div>
         <div class="setup-n tnum">${T(`${nf(n)} از ${nf(steps.length)}`, `${n} of ${steps.length}`)}</div>
       </div>
       <div class="meter wide setup-bar"><i style="width:${Math.round((n / steps.length) * 100)}%"></i></div>
-      <ol class="setup-list">${steps.map((x) => `<li><${x.go.startsWith('href') ? 'a' : 'button'} class="setup-i ${x.done ? 'done' : ''}" ${x.go}>
-        <span class="setup-ck">${x.done ? ico('check', 14) : ''}</span>
-        <span class="grow"><b>${x.t}</b><span class="small muted">${x.s}</span></span>${x.done ? '' : ico('chev', 16, 'chev')}</${x.go.startsWith('href') ? 'a' : 'button'}></li>`).join('')}</ol>
-      <button class="btn btn-ghost btn-xs setup-later" data-act="setupHide">${T('بعداً', 'Later')}</button>
+      ${n ? `<div class="setup-done">${steps.filter((x) => x.done).map((x) => `<span class="pill ok">${ico('check', 12)} ${x.short}</span>`).join('')}</div>` : ''}
+      <ol class="setup-list">${todo.map((x, i) => `<li><${tag(x)} class="setup-i ${i === 0 ? 'next' : ''}" ${x.go}>
+        <span class="setup-ck">${i === 0 ? ico('arrow', 13, 'dir') : ''}</span>
+        <span class="grow"><b>${x.t}</b><span class="small muted">${x.s}</span></span>${ico('chev', 16, 'chev')}</${tag(x)}></li>`).join('')}</ol>
+      <button class="btn btn-ghost btn-xs setup-later" data-act="setupHide">${T('بعداً انجامش می‌دم', 'Hide for now')}</button>
     </section>`;
 }
 
@@ -159,8 +162,8 @@ on({
   setupHide() { commit((s) => { s.studio.setupHidden = true; }); },
   ovCopyLink() {
     const url = pageUrl();
-    const done = () => { commit((s) => { s.studio.sharedPage = true; }); toast(T('لینک صفحه کپی شد؛ بذارش تو بیو اینستاگرام', 'Link copied — put it in your Instagram bio'), 'link'); };
-    if (navigator.clipboard) navigator.clipboard.writeText(url).then(done).catch(done); else done();
+    copyText(url, T('لینک صفحه کپی شد؛ بذارش تو بیو اینستاگرام', 'Link copied — put it in your Instagram bio'));
+    commit((s) => { s.studio.sharedPage = true; });
   },
   ovSeg(el) { aprefs.seg = el.dataset.seg; navigate('/studio/audience'); },
   ovMsgNext() { bprefs.to = null; bprefs.seg = 'next'; navigate('/studio/broadcast'); },

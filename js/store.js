@@ -13,6 +13,7 @@ const fresh = () => ({
   hostRequests: [],            // "become a host" requests sent from the login page
   following: [],
   saved: [],
+  waitlist: [],                // sold-out events this visitor asked to hear about
   followedAt: {},
   bookings: [],                // { id, event, qty, name, phone, at, code }
   inbox: [],                   // { id, ts, kind, host, title, body, read }
@@ -21,6 +22,8 @@ const fresh = () => ({
     edits: {},                 // id -> partial overrides on a seed event
     cancelled: [],
     checkins: {},              // eventId -> { contactId: true }
+    doorPaid: {},              // eventId -> { ticketKey: true } — unpaid guests who paid in person
+    codeMade: false,           // getting-started: made a discount code
     walkins: [],               // { id, event, name, qty, at }
     notes: {},                 // contactId -> text
     tags: {},                  // contactId -> [tag]
@@ -66,7 +69,12 @@ function save() {
 }
 
 state = load();
-if (new URLSearchParams(location.search).has('reset')) { try { localStorage.removeItem(KEY); } catch (_) { /* ignore */ } state = fresh(); }
+if (new URLSearchParams(location.search).has('reset')) {
+  try { localStorage.removeItem(KEY); } catch (_) { /* ignore */ }
+  state = fresh();
+  /* one-shot: drop ?reset so a reload (or a shared link) doesn't wipe everything again */
+  try { const u = new URL(location.href); u.searchParams.delete('reset'); history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (_) { /* ignore */ }
+}
 
 /* first-ever visit: one welcome note so the bell has something honest in it */
 if (!state.seeded) {
@@ -75,7 +83,7 @@ if (!state.seeded) {
     id: 'welcome', ts: Date.now() - 6 * 60e3, kind: 'platform', host: null,
     title: { fa: 'به Went to Event خوش اومدی!', en: 'Welcome to Went to Event' },
     body: {
-      fa: 'هر میزبانی رو دنبال کنی، خبرهاش همین‌جا میاد. یه رویداد رزرو کن تا بلیتت تو «بلیت‌ها» ساخته بشه.',
+      fa: 'هر میزبانی رو دنبال کنی، خبرهاش همین‌جا میاد. یه رویداد رزرو کن تا بلیتت تو بخش Tickets ساخته بشه.',
       en: 'Updates from the hosts you follow land here. Reserve an event and your ticket appears under Tickets.',
     },
     read: false,
@@ -90,6 +98,19 @@ export function commit(fn, opts = {}) {
   if (!opts.silent) subs.forEach((cb) => cb(opts));
 }
 export const subscribe = (cb) => { subs.add(cb); return () => subs.delete(cb); };
+
+/* another tab (say, the site in one and the panel in another) saved: pick up its copy instead of overwriting it */
+window.addEventListener('storage', (ev) => {
+  if (ev.key !== KEY || !ev.newValue) return;
+  try {
+    const s = JSON.parse(ev.newValue); if (!s || s.v !== 1) return;
+    /* which side of the app a tab shows (site/panel) and its language belong to that tab alone */
+    const next = mergeDefaults(fresh(), { ...s, mode: state.mode, lang: state.lang });
+    if (JSON.stringify(next) === JSON.stringify(state)) return;
+    state = next; mem = state;
+    subs.forEach((cb) => cb({ keep: true, external: true }));
+  } catch (_) { /* ignore */ }
+});
 export function resetAll() {
   try { localStorage.removeItem(KEY); } catch (_) { /* ignore */ }
   mem = null;

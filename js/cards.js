@@ -5,7 +5,7 @@ import { ico } from './icons.js';
 import { esc, money, nf, compact, dNum, dMonthShort, dateOf, timeRange, relDay, bloom, uid } from './util.js';
 import { getHost, getEvent, seats, nextEvent, following } from './model.js';
 import { ME, CATEGORIES } from './data.js';
-import { on, toast, avatar, verified, sampleTag, poster, dchip } from './ui.js';
+import { on, toast, avatar, verified, sampleTag, poster, dchip, copyText } from './ui.js';
 
 const saved = (id) => S().saved.includes(id);
 
@@ -80,10 +80,9 @@ on({
   },
   share(el) {
     const id = el.dataset.id; const e = id ? getEvent(id) : null;
-    const url = location.href.split('#')[0] + (e ? `#/e/${e.id}` : '');
+    const url = location.href.split('#')[0].split('?')[0] + (e ? `#/e/${e.id}` : '');
     const data = { title: e ? L(e.title) : 'Went to Event', url };
     if (navigator.share) navigator.share(data).catch(() => {});
-    else navigator.clipboard?.writeText(url).then(() => toast(T('لینک کپی شد', 'Link copied'), 'link')).catch(() => toast(T('لینک کپی نشد، دوباره امتحان کن', "Couldn't copy"), 'info'));
-    if (!navigator.share && !navigator.clipboard) toast(url, 'link');
+    else copyText(url, T('لینک کپی شد', 'Link copied'));
   },
 });

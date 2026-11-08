@@ -5,7 +5,7 @@ import { ico } from '../icons.js';
 import { esc, nf, money, uid, dFull, DAY } from '../util.js';
 import { codes, eventsOf, isLive, getEvent } from '../model.js';
 import { ME } from '../data.js';
-import { on, openSheet, toast, confirmSheet, empty, placeAllPills, placePill } from '../ui.js';
+import { on, openSheet, toast, confirmSheet, empty, placeAllPills, placePill, copyText } from '../ui.js';
 import { pageHead } from './kit.js';
 
 export const title = () => T('کدهای تخفیف', 'Discount codes');
@@ -16,7 +16,7 @@ const stateTxt = (c) => ({
   expired: `<span class="pill off">${T('تاریخش گذشته', 'Expired')}</span>`,
   full: `<span class="pill off">${T('تموم شده', 'Used up')}</span>`,
 }[c.state]);
-const valueTxt = (c) => (c.type === 'pct' ? T(`${nf(c.value)}٪ تخفیف`, `${c.value}% off`) : T(`${money(c.value)} تخفیف`, `${money(c.value)} off`));
+const valueTxt = (c) => (c.type === 'pct' ? T(`${nf(c.value)}٪ تخفیف`, `${c.value}% off`) : T(`${money(c.value)} تخفیف برای هر نفر`, `${money(c.value)} off per person`));
 
 /* writes go to the stored list; the first write copies the seeded set over */
 const edit = (fn) => commit((s) => { s.studio.codes = s.studio.codes ?? codes().map(({ used, expired, full, state, ...c }) => ({ ...c, used: used - S().bookings.filter((b) => b.promo === c.code).length })); fn(s.studio.codes); });
@@ -88,7 +88,7 @@ on({
         type = t.dataset.t;
         s.el.querySelectorAll('#cd-type button').forEach((b) => b.classList.toggle('on', b === t));
         placePill(s.$('#cd-type'));
-        s.$('#cd-val-l').textContent = type === 'pct' ? T('چند درصد؟', 'How many percent?') : T('چند تومن؟', 'How many toman?');
+        s.$('#cd-val-l').textContent = type === 'pct' ? T('چند درصد؟', 'How many percent?') : T('چند تومن برای هر نفر؟', 'How many toman per person?');
         s.$('#cd-val').value = type === 'pct' ? '10' : '50000';
         return;
       }
@@ -102,6 +102,7 @@ on({
       if (code.length < 3) return bad(T('کد حداقل ۳ حرف باشه', 'Use at least 3 characters'));
       if (codes().some((c) => c.code === code)) return bad(T('این کد رو قبلاً ساختی', 'You already have this code'));
       if (!val || (type === 'pct' && val > 90)) return bad(type === 'pct' ? T('درصد باید بین ۱ تا ۹۰ باشه', 'Percent must be 1–90') : T('مبلغ رو وارد کن', 'Enter an amount'));
+      commit((st) => { st.studio.codeMade = true; }, { silent: true });
       edit((list) => list.unshift({ id: uid('k'), code, type, value: val, limit: lim, used: 0, expires: days ? Date.now() + days * DAY : null, event: s.$('#cd-ev').value || null, active: true }));
       s.close(); toast(T(`کد ${code} ساخته شد`, `Code ${code} created`), 'tag');
     });
@@ -112,5 +113,5 @@ on({
     const ok = await confirmSheet({ title: T('این کد پاک بشه؟', 'Delete this code?'), text: T(`کد «${c.code}» دیگه کار نمی‌کنه. رزروهایی که باهاش انجام شده سر جاشون می‌مونن.`, `“${c.code}” stops working. Bookings that used it stay as they are.`), ok: T('آره، پاکش کن', 'Yes, delete'), danger: true });
     if (ok) edit((list) => { const i = list.findIndex((x) => x.id === el.dataset.id); if (i >= 0) list.splice(i, 1); });
   },
-  codeCopy(el) { navigator.clipboard?.writeText(el.dataset.code).then(() => toast(T('کد کپی شد', 'Code copied'), 'copy')).catch(() => toast(el.dataset.code, 'tag')); },
+  codeCopy(el) { copyText(el.dataset.code, T(`کد ${el.dataset.code} کپی شد`, `Code ${el.dataset.code} copied`)); },
 });

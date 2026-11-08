@@ -5,7 +5,9 @@ import { ico } from '../icons.js';
 import { esc, nf, fmtPhone, maskPhone, normPhone, validPhone } from '../util.js';
 import { userName, hosts, myUpcoming, getHost, unread } from '../model.js';
 import { ME } from '../data.js';
-import { avatar, verified, person, on, openSheet, toast } from '../ui.js';
+import { avatar, verified, person, on, openSheet, toast, setTab } from '../ui.js';
+import { prefs as xprefs } from './explore.js';
+import { getEvent } from '../model.js';
 import { authed } from '../auth.js';
 import { followBtn } from '../cards.js';
 
@@ -29,8 +31,8 @@ export function render() {
 
     <section class="me-stats">
       <a href="#/tickets"><b>${nf(myUpcoming().length)}</b><span class="micro">${T('بلیت', 'Tickets')}</span></a>
-      <a href="#/tickets" data-saved><b>${nf(st.saved.length)}</b><span class="micro">${T('ذخیره', 'Saved')}</span></a>
-      <a href="#/explore" data-follow><b>${nf(fol.length)}</b><span class="micro">${T('دنبال‌شده', 'Following')}</span></a>
+      <a href="#/tickets" data-act="meSaved" data-native><b>${nf(st.saved.map(getEvent).filter((e) => e && e.status !== 'cancelled').length)}</b><span class="micro">${T('ذخیره', 'Saved')}</span></a>
+      <a href="#/explore" data-act="meFollow" data-native><b>${nf(fol.length)}</b><span class="micro">${T('دنبال‌شده', 'Following')}</span></a>
     </section>
 
     ${authed() ? `<a class="card hi studio-cta" href="#/studio">
@@ -73,6 +75,8 @@ export function render() {
 }
 
 on({
+  meSaved() { setTab('tickets', 'saved'); },
+  meFollow() { xprefs.cat = 'following'; xprefs.q = ''; xprefs.tab = 'events'; },
   editMe() {
     const st = S();
     const s = openSheet({
@@ -87,6 +91,7 @@ on({
       if (!ev.target.closest('[data-save]')) return;
       const name = s.$('#me-n').value.trim(), phone = s.$('#me-p').value;
       if (name.length < 2) { s.$('#me-n').classList.add('err'); s.$('#me-n').focus(); return; }
+      if (s.closed) return;
       if (!validPhone(phone)) { const e = s.$('#me-e'); e.hidden = false; e.textContent = T('شماره باید با ۰۹ شروع بشه و ۱۱ رقم باشه', 'Enter a mobile number starting with 09 (11 digits)'); s.$('#me-p').focus(); return; }
       commit((x) => { x.user.name = name; x.user.phone = normPhone(phone); });
       s.close(); toast(T('ذخیره شد', 'Saved'), 'check');

@@ -3,7 +3,8 @@ import { S, commit } from './store.js';
 import { T, L, isFa } from './i18n.js';
 import { ico } from './icons.js';
 import { esc, money, nf, dFull, dateOf, timeRange, normPhone, validPhone, fmtPhone, qr, ticketPayload, uid, relDay } from './util.js';
-import { getEvent, getHost, seats, userName, applyCode } from './model.js';
+import { getEvent, getHost, seats, userName, applyCode, guests } from './model.js';
+import { ME } from './data.js';
 import { on, openSheet, closeSheets, toast, poster, confirmSheet, avatar } from './ui.js';
 import { navigate } from './app.js';
 
@@ -18,8 +19,8 @@ const mini = (e) => {
     </div></div>`;
 };
 
-function newCode(prefix) {
-  const taken = new Set(S().bookings.map((b) => b.code));
+function newCode(prefix, eventId) {
+  const taken = new Set([...S().bookings.map((b) => b.code), ...guests(eventId).map((g) => g.code)]);
   let c; do { c = `${prefix}-${1000 + Math.floor(Math.random() * 8999)}`; } while (taken.has(c));
   return c;
 }
@@ -37,7 +38,7 @@ export function openBooking(id) {
   const gross = () => e.price * qty;
   const total = () => (promo ? promo.total : gross());
   const WHY = { empty: T('کد رو بنویس', 'Type a code'), nope: T('این کد معتبر نیست', "That code isn't valid"), expired: T('این کد تاریخش گذشته', 'That code has expired'), full: T('ظرفیت این کد تموم شده', 'That code has been used up'), event: T('این کد برای یه رویداد دیگه‌ست', "That code is for a different event") };
-  const promoBlock = () => (e.price ? (promo
+  const promoBlock = () => (e.price && e.host === ME ? (promo
     ? `<div class="promo-on">${ico('tag', 16)}<span class="grow"><b class="latin">${esc(promo.code)}</b> · ${T(`${money(promo.off)} تخفیف`, `${money(promo.off)} off`)}</span><button class="btn btn-ghost btn-xs" data-promo-x>${T('حذف', 'Remove')}</button></div>`
     : promoOpen
       ? `<div class="promo-row"><input id="bk-promo" class="input ltr" value="${esc(promoDraft)}" placeholder="${T('کد تخفیف', 'Discount code')}" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="btn btn-glass" data-promo-go>${T('اعمال', 'Apply')}</button></div>${promoErr ? `<span class="err-t">${promoErr}</span>` : ''}`
@@ -49,7 +50,7 @@ export function openBooking(id) {
       <div><div class="lbl-t">${T('تعداد نفرات', 'Guests')}</div><div class="hint">${T(`حداکثر ${nf(max)} نفر`, `Up to ${max}`)}</div></div>
       <div class="stepper"><button data-q="-1" aria-label="-" ${qty <= 1 ? 'disabled' : ''}>${ico('minus', 18)}</button><output class="tnum">${nf(qty)}</output><button data-q="1" aria-label="+" ${qty >= max ? 'disabled' : ''}>${ico('plus', 18)}</button></div>
     </div>
-    <div class="field"><label for="bk-name">${T('نام', 'Name')}</label><input id="bk-name" class="input" autocomplete="name" value="${esc(user.name)}" placeholder="${T('نام و نام خانوادگی', 'Full name')}"></div>
+    <div class="field"><label for="bk-name">${T('نام', 'Name')}</label><input id="bk-name" class="input" autocomplete="name" value="${esc(user.name)}" placeholder="${T('نام و نام خانوادگی', 'Full name')}"><span class="err-t" id="bk-nerr" hidden></span></div>
     <div class="field"><label for="bk-phone">${T('شماره موبایل', 'Mobile number')}</label><input id="bk-phone" class="input ltr" inputmode="tel" autocomplete="tel" value="${esc(fmtPhone(user.phone))}" placeholder="0912 345 6789" style="text-align:start"><span class="err-t" id="bk-err" hidden></span></div>
     <div class="promo">${promoBlock()}</div>
     <div class="bk-total">
@@ -57,7 +58,7 @@ export function openBooking(id) {
       ${promo ? `<div class="li-row ok"><span>${T('تخفیف', 'Discount')}</span><span>− ${money(promo.off)}</span></div>` : ''}
       <div class="li-row tot"><span>${T('مبلغ قابل پرداخت', 'To pay')}</span><b>${money(total())}</b></div>
     </div>
-    <p class="small muted" style="margin-top:14px;display:flex;gap:8px;align-items:flex-start">${ico('info', 16)}<span>${T('تا ۴۸ ساعت قبل از شروع، می‌تونی بدون جریمه کنسلش کنی و کل پولت برمی‌گرده.', 'Free cancellation up to 48 hours before the start — you get the full amount back.')}</span></p>`;
+    <p class="small muted" style="margin-top:14px;display:flex;gap:8px;align-items:flex-start">${ico('info', 16)}<span>${e.day < 2 ? T('این رویداد کمتر از ۴۸ ساعت دیگه شروع می‌شه؛ اگه بعد از رزرو کنسلش کنی، پولش برنمی‌گرده.', 'This starts in under 48 hours — if you cancel after booking, it isn\'t refunded.') : T('تا ۴۸ ساعت قبل از شروع، می‌تونی بدون جریمه کنسلش کنی و کل پولت برمی‌گرده.', 'Free cancellation up to 48 hours before the start — you get the full amount back.')}</span></p>`;
   const foot = () => `<button class="btn btn-primary btn-block" data-pay>${e.price ? `${T('پرداخت و رزرو', 'Pay & reserve')} · ${money(total())}` : T('رزرو رایگان', 'Reserve for free')}</button>`;
 
   const s = openSheet({
@@ -75,7 +76,18 @@ export function openBooking(id) {
     if (r.ok) { promo = r; promoErr = ''; paint(); toast(T('کد تخفیف اعمال شد', 'Discount applied'), 'tag'); }
     else { promoErr = WHY[r.why]; paint(); s.$('#bk-promo')?.focus(); }
   };
-  s.el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && ev.target.id === 'bk-promo') { ev.preventDefault(); tryPromo(); } });
+  s.el.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter') return;
+    if (ev.target.id === 'bk-promo') { ev.preventDefault(); tryPromo(); }
+    else if (ev.target.id === 'bk-name') { ev.preventDefault(); s.$('#bk-phone')?.focus(); }
+    else if (ev.target.id === 'bk-phone') { ev.preventDefault(); pay(); }
+  });
+  /* typing clears that field's error straight away */
+  s.el.addEventListener('input', (ev) => {
+    const f = ev.target.closest('.input'); if (!f || !f.classList.contains('err')) return;
+    f.classList.remove('err');
+    const m = f.parentElement.querySelector('.err-t'); if (m) m.hidden = true;
+  });
   s.el.addEventListener('click', (ev) => {
     const q = ev.target.closest('[data-q]');
     if (q) {
@@ -88,24 +100,31 @@ export function openBooking(id) {
     if (ev.target.closest('[data-promo-x]')) { promo = null; promoOpen = false; promoDraft = ''; paint(); return; }
     if (ev.target.closest('[data-pay]')) pay();
   });
+  let busy = false;
   const pay = () => {
+    if (busy) return;
     const name = s.$('#bk-name').value.trim(), phone = s.$('#bk-phone').value;
     const err = s.$('#bk-err');
-    if (name.length < 2) { s.$('#bk-name').classList.add('err'); s.$('#bk-name').focus(); return; }
+    if (name.length < 2) {
+      const n = s.$('#bk-name'); n.classList.remove('err'); void n.offsetWidth; n.classList.add('err');
+      const ne = s.$('#bk-nerr'); ne.hidden = false; ne.textContent = T('اسمتو بنویس تا بلیت به اسم خودت صادر بشه', 'Add your name so the ticket is in your name'); n.focus(); return;
+    }
     if (!validPhone(phone)) {
       const p = s.$('#bk-phone'); p.classList.remove('err'); void p.offsetWidth; p.classList.add('err');
       err.hidden = false; err.textContent = T('شماره باید با ۰۹ شروع بشه و ۱۱ رقم باشه', 'Enter a mobile number starting with 09 (11 digits)'); p.focus(); return;
     }
+    busy = true;
     const btn = s.$('[data-pay]'); btn.innerHTML = '<span class="spin"></span>'; btn.classList.add('is-off');
     setTimeout(() => {
-      const code = newCode(h.prefix);
-      const b = { id: uid('b'), event: e.id, qty, name, phone: normPhone(phone), at: Date.now(), code, total: total(), promo: promo ? promo.code : null, discount: promo ? promo.off : 0 };
+      if (s.closed) return;            // closed while paying: nothing is booked
+      const code = newCode(h.prefix, e.id);
+      const b = { id: uid('b'), event: e.id, evAt: dateOf(e.day).getTime(), qty, name, phone: normPhone(phone), at: Date.now(), code, total: total(), promo: promo ? promo.code : null, discount: promo ? promo.off : 0 };
       commit((st2) => {
         st2.bookings.push(b);
         st2.user.name = name; st2.user.phone = b.phone;
         const when = `${dFull(dateOf(e.day))}`;
         st2.inbox.unshift({
-          id: uid('n'), ts: Date.now(), kind: 'booking', host: e.host,
+          id: uid('n'), ts: Date.now(), kind: 'booking', host: e.host, booking: b.id,
           title: { fa: 'رزروت تأیید شد', en: 'Reservation confirmed' },
           body: { fa: `بلیت ${code} برای «${e.title.fa || e.title}» آماده‌ست.`, en: `Ticket ${code} for “${e.title.en || e.title}” is ready.` },
           read: false,
@@ -126,7 +145,7 @@ export function openBooking(id) {
       <div class="bk-done">
         <div class="ok-ring"><svg viewBox="0 0 52 52" width="52" height="52"><circle cx="26" cy="26" r="24" fill="none" stroke="var(--ember)" stroke-width="2.5" class="ok-c"/><path d="M15 27l8 8 14-16" fill="none" stroke="var(--ember)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="ok-p"/></svg></div>
         <h2 class="h1">${T('جات رزرو شد!', "You're in.")}</h2>
-        <p class="lede">${T('بلیتت آماده‌ست و تو بخش «بلیت‌ها» منتظرته.', 'Your ticket is waiting under Tickets.')}</p>
+        <p class="lede">${T('بلیتت آماده‌ست و تو بخش Tickets منتظرته. دم در همین QR رو نشون بده.', 'Your ticket is waiting under Tickets. Show this QR at the door.')}</p>
         <div class="mini-ticket">
           <div class="mt-l"><div class="micro">${esc(L(h.name))}</div><div class="h3" style="margin-block:3px 6px">${esc(L(e.title))}</div><div class="small muted">${esc(dFull(dateOf(e.day)))} · ${esc(e.from)}</div><div class="code mt-code">${esc(b.code)}</div></div>
           <div class="mt-qr">${qr(ticketPayload(b), 92)}</div>
@@ -161,11 +180,16 @@ export function openTicket(bid) {
         </div>
       </div>
       <p class="small muted" style="margin-top:14px">${esc(L(h.addressNote || { fa: 'آدرس دقیق رو میزبان برات می‌فرسته.', en: 'The host sends the exact address.' }))}</p>`,
-    foot: e.day >= 0 ? `<div class="row-btns eq"><button class="btn btn-danger" data-cancel>${T('لغو رزرو', 'Cancel reservation')}</button><button class="btn btn-glass" data-act="share" data-id="${e.id}">${ico('share', 18)} ${T('اشتراک', 'Share')}</button></div>` : '',
+    foot: e.day >= 0 ? `<div class="row-btns eq"><a class="btn btn-glass" href="#/e/${e.id}" data-close-sheet>${ico('info', 18)} ${T('جزئیات رویداد', 'Event details')}</a><button class="btn btn-glass" data-act="share" data-id="${e.id}">${ico('share', 18)} ${T('اشتراک', 'Share')}</button></div>
+      <button class="btn btn-ghost btn-sm tk-cancel" data-cancel>${T('نمی‌تونم بیام؛ لغو رزرو', "Can't make it? Cancel")}</button>` : '',
   });
   s.el.addEventListener('click', async (ev) => {
+    if (ev.target.closest('[data-close-sheet]')) { s.close(); return; }
     if (!ev.target.closest('[data-cancel]')) return;
-    const ok = await confirmSheet({ title: T('رزروت کنسل بشه؟', 'Cancel this reservation?'), text: T('جات آزاد می‌شه و بلیتت هم از لیست تو و میزبان پاک می‌شه.', 'Your spot is released and the ticket is removed for you and the host.'), ok: T('آره، کنسلش کن', 'Yes, cancel'), danger: true });
+    const late = b.evAt ? (b.evAt + (Number(String(e.from).slice(0, 2)) || 0) * 3600e3 - Date.now()) < 48 * 3600e3 : e.day < 2;
+    const ok = await confirmSheet({ title: T('رزروت کنسل بشه؟', 'Cancel this reservation?'), text: late
+      ? T('کمتر از ۴۸ ساعت به شروع مونده؛ طبق قانون لغو، این رزرو بازپرداخت نداره. جات آزاد می‌شه و بلیتت پاک می‌شه.', 'It starts in under 48 hours, so under the cancellation rule this booking isn\'t refunded. Your spot is released and the ticket removed.')
+      : T('جات آزاد می‌شه، بلیتت پاک می‌شه و کل پولت برمی‌گرده.', 'Your spot is released, the ticket is removed and you get a full refund.'), ok: T('آره، کنسلش کن', 'Yes, cancel'), danger: true });
     if (!ok) return;
     commit((st) => { st.bookings = st.bookings.filter((x) => x.id !== bid); });
     s.close(); toast(T('رزروت کنسل شد', 'Reservation cancelled'), 'check');

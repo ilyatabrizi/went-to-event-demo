@@ -24,7 +24,7 @@ function eventResults() {
   });
   if (!list.length) {
     return empty('search', T('چیزی پیدا نشد', 'Nothing found'), prefs.cat === 'following'
-      ? T('هنوز کسی رو دنبال نکردی. از بخش «میزبان‌ها» شروع کن.', "You're not following any host yet. Start from the Hosts tab.")
+      ? (S().following.length ? T('میزبان‌هایی که دنبالشون می‌کنی فعلاً رویداد پیش رو ندارن. خبر بعدیشون میاد تو اعلان‌هات.', "The hosts you follow have nothing coming up right now. Their next news lands in your inbox.") : T('هنوز کسی رو دنبال نکردی. از بخش «میزبان‌ها» شروع کن.', "You're not following any host yet. Start from the Hosts tab."))
       : T('یه کلمه‌ی دیگه امتحان کن یا فیلتر رو بردار.', 'Try another word or clear the filter.'));
   }
   const groups = new Map();

@@ -8,6 +8,7 @@ import { poster, avatar, evRow, empty, tabs, panel } from '../ui.js';
 
 export const title = () => T('بلیت‌ها', 'Tickets');
 
+let reviewed = new Set();
 function ticketCard(b) {
   const e = b.ev, h = getHost(e.host), d = dateOf(e.day);
   const cancelled = e.status === 'cancelled';
@@ -26,11 +27,13 @@ function ticketCard(b) {
       </div>
       <div class="tk-qr-s">${qr(ticketPayload(b), 64)}<span class="code">${esc(b.code)}</span></div>
     </button>
+    ${e.day < 0 && !cancelled && !reviewed.has(e.id) ? `<button class="btn btn-glass btn-xs tk-rev" data-act="revWrite" data-host="${e.host}">${ico('star', 14)} ${T('چطور بود؟ نظر بده', 'How was it? Leave a review')}</button>` : ''}
   </article>`;
 }
 
 export function render() {
   const up = myUpcoming(), past = myPast();
+  reviewed = new Set(S().reviews.map((r) => r.event));
   const saved = S().saved.map(getEvent).filter((e) => e && e.status !== 'cancelled');
   const items = [{ id: 'up', label: T('پیش رو', 'Upcoming'), n: up.length }, { id: 'saved', label: T('ذخیره‌شده', 'Saved'), n: saved.length }];
   if (past.length) items.push({ id: 'past', label: T('گذشته', 'Past'), n: past.length });
